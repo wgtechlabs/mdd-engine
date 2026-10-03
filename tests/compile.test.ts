@@ -23,6 +23,133 @@ async function fixture(files: Record<string, string>): Promise<string> {
 }
 
 describe("compileProject", () => {
+  test("ignores unused local reference definitions and their assets", async () => {
+    const projectDir = await fixture({
+      "contents/index.md":
+        "# Home\n\n[missing]: missing.png\n\n[unused]: unused.png",
+      "contents/unused.png": "unused image",
+    });
+    const { site, diagnostics } = await compileProject({ projectDir });
+    expect(diagnostics).toEqual([]);
+    expect(site?.pages[0]?.html).toContain("Home");
+    expect(site?.assets).toEqual([]);
+  });
+
+  test("resolves link and image references using only the first definition", async () => {
+    const projectDir = await fixture({
+      "contents/index.md": [
+        "# Home",
+        "[Download][photo] and ![Photo][PHOTO]",
+        "[photo]: photo.png",
+        "[PHOTO]: missing.png",
+      ].join("\n\n"),
+      "contents/photo.png": "image",
+    });
+    const { site, diagnostics } = await compileProject({
+      projectDir,
+      basePath: "/docs/",
+    });
+    expect(diagnostics).toEqual([]);
+    expect(site?.pages[0]?.html).toContain('href="/docs/_assets/photo.png"');
+    expect(site?.pages[0]?.html).toContain('src="/docs/_assets/photo.png"');
+    expect(site?.assets.map((asset) => asset.source)).toEqual([
+      "mdd/contents/photo.png",
+    ]);
+  });
+
+  for (const reference of ["[Download][missing]", "![Image][missing]"]) {
+    test(`still validates a used reference: ${reference}`, async () => {
+      const projectDir = await fixture({
+        "contents/index.md": `# Home\n\n${reference}\n\n[missing]: missing.png`,
+      });
+      const result = await compileProject({ projectDir });
+      expect(result.site).toBeUndefined();
+      expect(
+        result.diagnostics.some((item) => item.code === "MISSING_ASSET"),
+      ).toBe(true);
+    });
+  }
+
+  test("excludes unused footnote headings from titles and heading metadata", async () => {
+    const projectDir = await fixture({
+      "contents/index.md": "[^unused]: # Secret\n\n# Home",
+    });
+    const { site, diagnostics } = await compileProject({ projectDir });
+    expect(diagnostics).toEqual([]);
+    expect(site?.pages[0]?.title).toBe("Home");
+    expect(site?.pages[0]?.headings).toEqual([
+      { depth: 1, text: "Home", id: "mdd-home" },
+    ]);
+    expect(site?.pages[0]?.html).not.toContain("Secret");
+  });
+
+  test("rejects links to headings in unused footnotes", async () => {
+    const projectDir = await fixture({
+      "contents/index.md":
+        "# Home\n\n[Secret](#secret)\n\n[^unused]: ## Secret",
+    });
+    const result = await compileProject({ projectDir });
+    expect(result.site).toBeUndefined();
+    expect(
+      result.diagnostics.some((item) => item.code === "MISSING_ANCHOR"),
+    ).toBe(true);
+  });
+
+  test("ignores local links and assets inside unused footnotes", async () => {
+    const projectDir = await fixture({
+      "contents/index.md": [
+        "# Home",
+        "[^unused]: [Missing](missing.md) and ![Unused](unused.png)",
+      ].join("\n\n"),
+      "contents/unused.png": "unused image",
+    });
+    const { site, diagnostics } = await compileProject({ projectDir });
+    expect(diagnostics).toEqual([]);
+    expect(site?.assets).toEqual([]);
+  });
+
+  test("retains used and transitively referenced footnote headings and assets", async () => {
+    const projectDir = await fixture({
+      "contents/index.md": [
+        "# Home",
+        "Read the note[^first] and [second heading](#second).",
+        "[^first]: ## First\n\n    Read more[^second].",
+        "[^second]: ## Second\n\n    ![Photo][photo]",
+        "[photo]: photo.png",
+      ].join("\n\n"),
+      "contents/photo.png": "image",
+    });
+    const { site, diagnostics } = await compileProject({
+      projectDir,
+      basePath: "/docs/",
+    });
+    expect(diagnostics).toEqual([]);
+    const page = site?.pages[0];
+    expect(page?.headings.map((heading) => heading.id)).toEqual([
+      "mdd-home",
+      "mdd-first",
+      "mdd-second",
+    ]);
+    expect(page?.html).toContain('id="mdd-first"');
+    expect(page?.html).toContain('id="mdd-second"');
+    expect(page?.html).toContain('href="/docs/#mdd-second"');
+    expect(page?.html).toContain('src="/docs/_assets/photo.png"');
+    expect(site?.assets).toHaveLength(1);
+  });
+
+  test("preserves globally used definitions inside unused footnotes", async () => {
+    const projectDir = await fixture({
+      "contents/index.md":
+        "# Home\n\n![Photo][photo]\n\n[^unused]: Unused note.\n\n    [photo]: photo.png",
+      "contents/photo.png": "image",
+    });
+    const { site, diagnostics } = await compileProject({ projectDir });
+    expect(diagnostics).toEqual([]);
+    expect(site?.pages[0]?.html).toContain('src="/_assets/photo.png"');
+    expect(site?.pages[0]?.html).not.toContain("Unused note");
+    expect(site?.assets).toHaveLength(1);
+  });
+
   test("prefers existing assets for file URLs while preserving explicit page routes", async () => {
     const projectDir = await fixture({
       "contents/index.md": [

@@ -23,6 +23,16 @@ The tests exercise config defaults and unknown/null settings, custom paths/theme
 
 Independent review confirmed and corrected dotted-route lookup and reference-image validation gaps, aligned reserved names with the planned website exporter, and corrected existing-asset precedence over dotted page routes. Review also checked the publication locks; all changes were followed by affected tests and runtime checks.
 
+## PR #2 reference-definition fixes
+
+Verified October 3, 2026 after the promotion review. Nine additional compilation regressions cover unused and duplicate link/image definitions, inactive footnote headings and links, referenced and transitive footnotes, and global definitions nested inside omitted footnotes. Five of the new cases failed against the original implementation and passed after the correction.
+
+- `bun run check`: lint, type checking, all 89 tests (288 assertions), build, and packed consumer passed.
+- `bun run coverage`: 96.92% lines and 94.38% functions.
+- The same packed package passed on Node 22.0.0, 22.16.0, 24.21.0, and 26.10.0.
+- `bun audit`: no vulnerabilities reported.
+- Independent review found no actionable issues in the fix; ten additional probes covered cycles, duplicate footnotes, render/heading order, active security validation, and globally scoped definitions under omitted footnotes.
+
 ## Boundaries
 
 - The package is not published. npm returned no public package for `@wgtechlabs/mdd-engine`; publish access still needs verification.

@@ -1,6 +1,12 @@
 import { basename, extname } from "node:path";
 import GithubSlugger from "github-slugger";
-import type { Nodes, Paragraph, Root } from "mdast";
+import type {
+  Definition,
+  FootnoteDefinition,
+  Nodes,
+  Paragraph,
+  Root,
+} from "mdast";
 import { toString as nodeText } from "mdast-util-to-string";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
@@ -59,6 +65,50 @@ const htmlRenderer = unified()
 const markdownRenderer = unified().use(remarkGfm).use(remarkStringify);
 const componentNames = new Set(["note", "tip", "warning", "details"]);
 
+/** Keep the same first-wins, reachable definitions that the HTML renderer uses. */
+function retainReferencedDefinitions(tree: Root): void {
+  const definitions = new Map<string, Definition>();
+  const footnotes = new Map<string, FootnoteDefinition>();
+  visit(tree, (node) => {
+    if (node.type === "definition") {
+      const id = node.identifier.toUpperCase();
+      if (!definitions.has(id)) definitions.set(id, node);
+    } else if (node.type === "footnoteDefinition") {
+      const id = node.identifier.toUpperCase();
+      if (!footnotes.has(id)) footnotes.set(id, node);
+    }
+  });
+
+  const usedDefinitions = new Set<Definition>();
+  const usedFootnotes = new Set<FootnoteDefinition>();
+  const pending: (Root | FootnoteDefinition)[] = [tree];
+  for (const content of pending) {
+    visit(content, (node, index, parent) => {
+      // Definitions are global, even when nested inside an unused footnote.
+      // Detach them now and append only reachable definitions after the body.
+      if (
+        (node.type === "definition" || node.type === "footnoteDefinition") &&
+        parent &&
+        index !== undefined
+      ) {
+        parent.children.splice(index, 1);
+        return [SKIP, index];
+      }
+      if (node.type === "linkReference" || node.type === "imageReference") {
+        const definition = definitions.get(node.identifier.toUpperCase());
+        if (definition) usedDefinitions.add(definition);
+      } else if (node.type === "footnoteReference") {
+        const footnote = footnotes.get(node.identifier.toUpperCase());
+        if (footnote && !usedFootnotes.has(footnote)) {
+          usedFootnotes.add(footnote);
+          pending.push(footnote);
+        }
+      }
+    });
+  }
+  tree.children.push(...usedDefinitions, ...usedFootnotes);
+}
+
 function unsafeUrl(url: string, image: boolean): boolean {
   // biome-ignore lint/suspicious/noControlCharactersInRegex: Reject schemes hidden by URL control characters.
   const normalized = url.replace(/[\u0000-\u0020\u007f-\u009f]/g, "");
@@ -77,6 +127,7 @@ export function parseDocument(
   diagnostics: Diagnostic[],
 ): ParsedDocument {
   const tree = parser.parse(source);
+  retainReferencedDefinitions(tree);
   const metadata: Metadata = {};
   const headings: Heading[] = [];
   const slugger = new GithubSlugger();

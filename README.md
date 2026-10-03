@@ -95,6 +95,8 @@ Title precedence is frontmatter title, first H1, then readable filename. Navigat
 
 Local `.md` links, extensionless routes, reference links, and images resolve from their source document. A leading slash addresses the documentation root. `basePath` prefixes public links, including `/docs/` and `/repository/docs/`. When a file-style URL matches both an existing supported asset and a page route, the asset wins: `chart.png` selects the image, while `/chart.png/` explicitly selects the page. If no regular asset exists, dotted page routes still resolve. External links are preserved without network requests. Headings have `mdd-`-prefixed GitHub-style slugs; author links such as `#installation` are rewritten to `#mdd-installation`. Duplicate headings receive `-1`, `-2`, and subsequent suffixes.
 
+Reference definitions follow Markdown's first-definition-wins rule. Unused definitions and unreferenced footnotes are omitted from normalized output and do not contribute assets, headings, or link-validation errors. Referenced footnotes, including notes reached through other notes, retain their content and validation.
+
 ## Content boundaries
 
 Raw HTML, executable URL schemes, path escapes, unknown configuration, missing local targets, and route collisions fail compilation. MDX is not evaluated; expressions are inert Markdown text, and JSX-style HTML is rejected. Hidden/sensitive paths are excluded. Content discovery rejects symlinks to avoid aliases and traversal; configured roots are resolved and checked against the checkout. Source files must remain stable while compilation and export run.
