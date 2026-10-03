@@ -15,4 +15,4 @@ Use Clean Commit messages: `<emoji> <type>: <lowercase description>` or `<emoji>
 
 Labels are managed through [GHLT](https://github.com/warengonzaga/github-labels-template). Routine template updates use `ghlt apply --repo wgtechlabs/mdd-engine`; a destructive `migrate` requires explicit authorization. The initial migration has already been completed.
 
-Do not publish packages or create releases from ordinary feature work. Follow [the release prerequisites](docs/RELEASING.md); the bootstrap workflow keeps publication locked.
+Do not publish packages or create releases from ordinary feature work. Follow [the release prerequisites](docs/RELEASING.md); eligible pushes to `main` publish to npm and GitHub Packages before creating a GitHub Release.
