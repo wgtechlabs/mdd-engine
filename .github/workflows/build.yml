@@ -11,13 +11,15 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
   pull-requests: write
   security-events: write
   actions: read
 
 jobs:
   build-flow:
-    uses: wgtechlabs/build-flow-action/.github/workflows/app.yml@721e590fb0be0b8622839cd8226b39f8beac33dd # v0.3.3
+    # Integration test pin: replace with the released Build Flow commit before merging.
+    uses: wgtechlabs/build-flow-action/.github/workflows/app.yml@167779d858c63426c534bce28e2d10aba1787e58 # OIDC integration
     secrets: inherit
     with:
       ci-profile: node-bun
@@ -36,6 +38,7 @@ jobs:
       enable-package: true
       enable-release: true
       package-registry: both
+      package-npm-auth-method: oidc
       package-manager: bun
       release-package-manager: bun
 

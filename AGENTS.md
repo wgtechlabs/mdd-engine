@@ -11,7 +11,7 @@ Current stage: implement and maintain the headless engine. Repository setup, Cle
 ## Toolchain and runtime
 
 - Use TypeScript.
-- Use Bun for installing dependencies, running development scripts, tests, and builds. Commit `bun.lock`; use frozen installs in CI. Do not introduce competing lockfiles.
+- Use Bun 1.3.10 for installing dependencies, running development scripts, tests, builds, and packing. Commit `bun.lock`; use frozen installs in CI. Do not introduce competing lockfiles. npm OIDC publication uses the native npm CLI to upload the Bun-packed tarball; it does not replace Bun as the project toolchain.
 - Support Node.js 22, 24, and 26, following the compatibility matrix in devin-discord-bot. The package must run without Bun installed on every supported major.
 - The default is always the latest Node.js LTS, currently Node 24 as verified on October 3, 2026. The highest tested major is not automatically the default. Recheck LTS status during implementation and deliberate runtime upgrades.
 - `.node-version`, `.nvmrc`, examples, and the default production runtime use the latest LTS; pin resolved versions for reproducible builds. Package `engines.node` describes the supported range rather than only that default. The reference range is `>=22.0.0`; verify the minimum against selected dependencies before publishing and document any higher required patch.
@@ -75,15 +75,18 @@ with:
   enable-package: true
   enable-release: true
   package-registry: both
+  package-npm-auth-method: oidc
   package-manager: bun
   release-package-manager: bun
 ```
 
-The installed caller is [.github/workflows/build.yml](.github/workflows/build.yml), pinned to the immutable commit for Build Flow v0.3.3. Package publication and GitHub Release creation are enabled for eligible pushes to `main`; dev, PR, and manual artifact publication are disabled. Promoting a PR to `main` can publish a release, so require explicit merge/release authorization and follow [docs/RELEASING.md](docs/RELEASING.md).
+The caller is [.github/workflows/build.yml](.github/workflows/build.yml). This migration uses a reviewed immutable Build Flow integration commit for CI; replace it with the released orchestrator commit before merging. The package primitive is the released v2.3.0. Do not claim OIDC is active from an action release or a validation run alone. Package publication and GitHub Release creation are enabled for eligible pushes to `main`; dev, PR, and manual artifact publication are disabled. Promoting a PR to `main` can publish a release, so require explicit merge/release authorization and follow [docs/RELEASING.md](docs/RELEASING.md).
 
 Use explicit Bun install/lint/typecheck/test/coverage/build commands supported by the package. The inspected `node-bun` defaults contain npm fallbacks; a failed Bun check must not turn into a successful fallback. Keep required security checks and run the Node package smoke check under each configured Node matrix version as part of the build gate. Do not claim that a parallel CodeQL job gates release unless its dependencies enforce that.
 
-Use one compatible package identity/version for both registries; identity is `@wgtechlabs/mdd-engine`, pending registry publish-access verification. Confirm license, registry scope access, package contents, and public visibility before publishing. Keep `NPM_TOKEN` in GitHub secrets. Use the built-in `GITHUB_TOKEN` with the required package/release scopes for GitHub; never hardcode or log tokens. Retain the caller permissions required by any enabled comments or security features.
+Use one compatible package identity/version for both registries: `@wgtechlabs/mdd-engine`. Confirm license, registry access, package contents, and public visibility before publishing. The npm authentication is Trusted Publishing with OIDC, using npm CLI >=11.5.1 on the pinned Node 24.21.0 runtime. Retain `package-npm-auth-method: oidc` when adopting the released orchestrator. Configure npm to trust `wgtechlabs/mdd-engine` / `build.yml`, allow direct `npm publish`, and preserve `id-token: write` through the reusable workflow chain. OIDC publishing must not require or fall back to `NPM_TOKEN`. GitHub Packages still uses the separate built-in `GITHUB_TOKEN` with `packages: write`, and GitHub Releases require `contents: write`. Never hardcode or log tokens; retain permissions required by enabled comments or security features.
+
+The first npm publication needs a one-time bootstrap if the package is absent. Use the preserved validated `0.1.0` tarball tied to the existing `v0.1.0` tag at finalized commit `3975075b4dee44806012e71d80e858ddcf2b39a9`; follow the verification and maintainer-authentication procedure in [docs/RELEASING.md](docs/RELEASING.md). Never rewrite the tag, duplicate an existing registry version, or blindly rerun a partial publication. Future eligible releases use automatic OIDC after the trusted publisher and workflow adoption are verified.
 
 Required sequencing: validate source → finalize release source/version → build package → confirm successful publication to BOTH registries → publish GitHub Release. Partial registry publication is incomplete and must not unlock release. Do not silently change existing primitive defaults; document consumer policy overrides such as non-main artifact publishing.
 
