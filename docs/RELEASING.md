@@ -37,7 +37,7 @@ Registry publishing is not atomic. If one registry succeeds, do not delete a pub
 
 ## First-release checklist
 
-1. Confirm `@wgtechlabs/mdd-engine` ownership and publish access in both registries, the license, intended public visibility, and package repository metadata.
+1. Confirm `@wgtechlabs/mdd-engine` ownership and publish access in both registries, intended public visibility, and package repository metadata. The license is MIT, selected by the owner; retain `LICENSE` in the published package.
 2. Inspect the packed package: runtime JavaScript and declarations present; tests, credentials, caches, and development files excluded. Run the packed-package smoke check in actual Node 22/24/26 and the lowest Node version claimed by `engines.node`.
 3. Complete the upstream prerequisites above and update the immutable workflow SHA plus its release-version comment. Verify Bun 1.3.10 selection and default parity at the new pin. The current pin has some floating transitive action references; an immutable caller pin alone does not pin those dependencies.
 4. Configure `NPM_TOKEN` as a GitHub Actions secret with the required npm publish access. GitHub Packages and release operations use the built-in `GITHUB_TOKEN`. Never commit tokens or place them in workflow inputs as literal values. Supply any organization-required Gitleaks license through `GITLEAKS_LICENSE`.
