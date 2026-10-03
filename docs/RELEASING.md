@@ -14,6 +14,7 @@ Do not remove one lock merely to make a release run. The current upstream cannot
 - Node 24.21.0 is the pinned default LTS runtime. The CI matrix selects current patches of Node 22, 24, and 26 independently of that default.
 - CI explicitly runs `lint`, `typecheck`, `test`, `coverage`, and `build` through Bun. It then runs `smoke`, which must execute the packed package with the real Node binary in that matrix job. Bun tests alone do not demonstrate Node compatibility.
 - All CI command overrides fail on an error. They deliberately replace upstream's `bun ... || npm ... --if-present` defaults, which can hide failures.
+- CodeQL uses `codeql-build-mode: none`: JavaScript/TypeScript analysis reads source and does not support the upstream `autobuild` default. This mode skips the upstream setup/install/build commands, so the separate scan job does not require Bun; the Node matrix still runs the full package build and smoke check.
 - The upstream Gitleaks and CodeQL checks remain enabled. Its CodeQL job runs alongside the release path; v0.3.1 does **not** enforce CodeQL completion before publishing. This must be addressed before removing the release lock so all required security checks gate publication.
 - `release-package-manager: bun` configures workspace detection. It is not a Bun runtime installation setting.
 

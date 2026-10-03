@@ -14,7 +14,8 @@ Verified October 3, 2026 on the `feature/headless-engine` implementation. This r
 | Package contents | Runtime ESM, declarations, README, package metadata; no source tests, cache, or secrets |
 | Runtime independence | Packed consumer ran with no Bun global and only its Node binary directory in PATH |
 | Public-prefix fixtures | `/`, `/docs/`, `/repository/docs/` passed |
-| Workflow static validation | Actionlint 1.7.12 passed; 20 caller inputs match pinned upstream schema |
+| Workflow static validation | Actionlint 1.7.12 passed; 21 caller inputs match pinned upstream schema |
+| CodeQL configuration | Uses `none` for JavaScript/TypeScript source analysis; skips Bun setup/install/build in the separate scan job |
 | GHLT migration | 9 initial labels replaced with 23 Clean Labels; authoritative read-back passed |
 | Clean Flow bootstrap | Remote `main` and `dev` established; work isolated on feature branch; rebase merging disabled |
 
