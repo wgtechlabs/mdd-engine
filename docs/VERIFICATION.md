@@ -37,6 +37,6 @@ Verified October 3, 2026 after the promotion review. Nine additional compilation
 
 - The package is not published. npm returned no public package for `@wgtechlabs/mdd-engine`; publish access still needs verification.
 - The owner selected the MIT License on October 3, 2026. The repository includes `LICENSE`, and package metadata declares `MIT`.
-- Actual publishing and GitHub Release creation are locked because the pinned upstream workflow does not enforce successful publication to both registries. See [RELEASING.md](RELEASING.md).
+- Publishing and GitHub Release creation are enabled for eligible pushes to `main`, using the corrected upstream security and dual-registry gates. Configuration and simulated failure checks do not prove a live registry publication. See [RELEASING.md](RELEASING.md).
 - GitHub-hosted CI results must be read from the feature pull request. Static workflow validation and local checks do not prove provider execution.
 - No website, Railway deployment, or other mdd repository was implemented in this phase.

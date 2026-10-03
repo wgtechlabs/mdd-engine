@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build-flow:
-    uses: wgtechlabs/build-flow-action/.github/workflows/app.yml@260b9a063ef59ccc760155c19902320feb7e25cb # v0.3.1
+    uses: wgtechlabs/build-flow-action/.github/workflows/app.yml@721e590fb0be0b8622839cd8226b39f8beac33dd # v0.3.3
     secrets: inherit
     with:
       ci-profile: node-bun
@@ -32,20 +32,19 @@ jobs:
       ci-typecheck-command: bun run typecheck
       ci-test-command: bun run test
       ci-coverage-command: bun run coverage
-      ci-build-command: bun run build && bun run smoke
+      ci-build-command: bun run build && bun run smoke && bun audit
       enable-package: true
       enable-release: true
       package-registry: both
       package-manager: bun
       release-package-manager: bun
 
-      # Consumer policy: only main may publish after the release lock is removed.
+      # Only an eligible main push may publish packages and a GitHub Release.
       publish-dev-artifacts: false
       publish-pr-artifacts: false
       publish-manual-artifacts: false
 
-      # Hard release lock: v0.3.1 accepts success in only one registry.
-      # package-publish-enabled also prevents source-finalize from committing/tagging.
-      # Upgrade the reviewed upstream pin and meet docs/RELEASING.md first.
-      package-publish-enabled: false
-      release-create: false
+      # The pinned workflow gates publication on CI/security and requires both
+      # registries plus successful package-job completion before GitHub Release.
+      package-publish-enabled: true
+      release-create: true
