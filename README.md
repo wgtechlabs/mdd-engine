@@ -120,3 +120,7 @@ bun audit
 `bun run build` emits Node ESM and TypeScript declarations to `dist/`. `bun run smoke` creates a package archive, installs it into an isolated consumer, and runs it with the current Node binary. It checks that Bun is unavailable inside the consumer and that all three base-path fixtures compile. On POSIX systems, `MDD_TEST_NODE_BINARIES` can contain colon-separated Node binary paths to exercise the same archive across versions.
 
 Follow [Clean Workflow](AGENTS.md), [contributing](CONTRIBUTING.md), and the [engine contract](docs/SPEC.md). See [verification](docs/VERIFICATION.md) for the checks performed during bootstrap.
+
+## License
+
+Licensed under the [MIT License](LICENSE).
