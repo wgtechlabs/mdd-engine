@@ -93,7 +93,7 @@ Use `note`, `tip`, `warning`, or `details` containers. Labels are optional; attr
 
 Title precedence is frontmatter title, first H1, then readable filename. Navigation uses `navTitle` when supplied. Explicit `order` sorts first; remaining siblings sort deterministically by label and path.
 
-Local `.md` links, extensionless routes, reference links, and images resolve from their source document. A leading slash addresses the documentation root. `basePath` prefixes public links, including `/docs/` and `/repository/docs/`. External links are preserved without network requests. Headings have `mdd-`-prefixed GitHub-style slugs; author links such as `#installation` are rewritten to `#mdd-installation`. Duplicate headings receive `-1`, `-2`, and subsequent suffixes.
+Local `.md` links, extensionless routes, reference links, and images resolve from their source document. A leading slash addresses the documentation root. `basePath` prefixes public links, including `/docs/` and `/repository/docs/`. When a file-style URL matches both an existing supported asset and a page route, the asset wins: `chart.png` selects the image, while `/chart.png/` explicitly selects the page. If no regular asset exists, dotted page routes still resolve. External links are preserved without network requests. Headings have `mdd-`-prefixed GitHub-style slugs; author links such as `#installation` are rewritten to `#mdd-installation`. Duplicate headings receive `-1`, `-2`, and subsequent suffixes.
 
 ## Content boundaries
 

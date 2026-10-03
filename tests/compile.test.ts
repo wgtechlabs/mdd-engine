@@ -23,6 +23,73 @@ async function fixture(files: Record<string, string>): Promise<string> {
 }
 
 describe("compileProject", () => {
+  test("prefers existing assets for file URLs while preserving explicit page routes", async () => {
+    const projectDir = await fixture({
+      "contents/index.md": [
+        "# Home",
+        "![Chart](chart.png)",
+        "[Download](/chart.png?download=1#preview)",
+        "![Reference][chart]",
+        "[chart]: chart.png",
+        "[Page](/chart.png/#chart)",
+        "[Source](chart.png.md#chart)",
+      ].join("\n\n"),
+      "contents/chart.png": "image",
+      "contents/chart.png.md": "# Chart",
+    });
+    const { site, diagnostics } = await compileProject({
+      projectDir,
+      basePath: "/docs/",
+    });
+    expect(diagnostics).toEqual([]);
+    const home = site?.pages.find((page) => page.route === "/");
+    expect(home?.html).toContain('src="/docs/_assets/chart.png" alt="Chart"');
+    expect(home?.html).toContain(
+      'src="/docs/_assets/chart.png" alt="Reference"',
+    );
+    expect(home?.html).toContain(
+      'href="/docs/_assets/chart.png?download=1#preview"',
+    );
+    expect(home?.html).toContain('href="/docs/chart.png/#mdd-chart"');
+    expect(site?.assets).toEqual([
+      {
+        source: "mdd/contents/chart.png",
+        destination: "_assets/chart.png",
+        url: "/docs/_assets/chart.png",
+      },
+    ]);
+  });
+
+  for (const pageFile of ["chart.png.md", "chart.png/index.md"]) {
+    test(`falls back to the dotted page when no regular asset exists: ${pageFile}`, async () => {
+      const projectDir = await fixture({
+        "contents/index.md": "# Home\n\n[Page](chart.png#chart)",
+        [`contents/${pageFile}`]: "# Chart",
+      });
+      const { site, diagnostics } = await compileProject({
+        projectDir,
+        basePath: "/docs/",
+      });
+      expect(diagnostics).toEqual([]);
+      expect(site?.pages.find((page) => page.route === "/")?.html).toContain(
+        'href="/docs/chart.png/#mdd-chart"',
+      );
+      expect(site?.assets).toEqual([]);
+    });
+  }
+
+  test("keeps missing explicit page routes separate from existing assets", async () => {
+    const projectDir = await fixture({
+      "contents/index.md": "# Home\n\n[Page](chart.png/)",
+      "contents/chart.png": "image",
+    });
+    const result = await compileProject({ projectDir });
+    expect(result.site).toBeUndefined();
+    expect(
+      result.diagnostics.some((item) => item.code === "MISSING_LINK"),
+    ).toBe(true);
+  });
+
   test("separates filesystem asset destinations from encoded public URLs", async () => {
     const projectDir = await fixture({
       "contents/index.md": "# Home\n\n![Café](<assets/café logo.png>)",

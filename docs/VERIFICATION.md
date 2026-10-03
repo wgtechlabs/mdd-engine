@@ -7,8 +7,8 @@ Verified October 3, 2026 on the `feature/headless-engine` implementation. This r
 | Frozen Bun installation | Passed with Bun 1.3.10 and committed `bun.lock` |
 | Biome formatting/lint | Passed |
 | TypeScript check and declaration build | Passed |
-| Bun unit/integration tests | 76 passed, 0 failed; 244 assertions |
-| Coverage | 96.74% lines, 94.38% functions |
+| Bun unit/integration tests | 80 passed, 0 failed; 258 assertions |
+| Coverage | 96.89% lines, 94.38% functions |
 | Dependency audit | No vulnerabilities reported by `bun audit` |
 | Packed package consumer | Passed on Node 22.0.0, 22.16.0, 24.21.0, and 26.10.0 |
 | Package contents | Runtime ESM, declarations, README, package metadata; no source tests, cache, or secrets |
@@ -21,7 +21,7 @@ Verified October 3, 2026 on the `feature/headless-engine` implementation. This r
 
 The tests exercise config defaults and unknown/null settings, custom paths/themes, invalid JSON, required homepage, root overlap, traversal and symlinks, metadata, GFM/components, nested diagnostics, unsafe URLs, deterministic routes/navigation/headings, dotted routes, reference images, local targets/anchors, assets, reserved paths, and normalized Markdown.
 
-Independent review confirmed and corrected dotted-route lookup and reference-image validation gaps, and aligned reserved names with the planned website exporter. Review also checked the publication locks; all changes were followed by affected tests and runtime checks.
+Independent review confirmed and corrected dotted-route lookup and reference-image validation gaps, aligned reserved names with the planned website exporter, and corrected existing-asset precedence over dotted page routes. Review also checked the publication locks; all changes were followed by affected tests and runtime checks.
 
 ## Boundaries
 

@@ -96,7 +96,27 @@ export async function resolveLinks(
             "Local links must stay inside the content root",
           );
         let target = !decoded ? page : byFile.get(targetFile);
-        if (!target) {
+        const extension = path.extname(decoded).toLowerCase();
+        let assetExists = false;
+        if (
+          !target &&
+          !decoded.endsWith("/") &&
+          assetExtensions.has(extension)
+        ) {
+          try {
+            await safeFile(project.contentsRoot, targetFile);
+            assetExists = true;
+          } catch (error) {
+            // An absent file or directory may still name a dotted page route.
+            // Safety and operational errors must never become route fallbacks.
+            if (
+              !(error instanceof AuthoringError) ||
+              !["PATH_NOT_FOUND", "INVALID_FILE_TYPE"].includes(error.code)
+            )
+              throw error;
+          }
+        }
+        if (!target && !assetExists) {
           const relative = relativeSource(project.contentsRoot, targetFile);
           const route = relative ? `/${relative.replace(/\/$/, "")}/` : "/";
           target = byRoute.get(route);
@@ -124,6 +144,7 @@ export async function resolveLinks(
         }
         if (
           decoded.toLowerCase().endsWith(".md") ||
+          decoded.endsWith("/") ||
           !decoded ||
           !path.extname(decoded)
         ) {
@@ -132,22 +153,19 @@ export async function resolveLinks(
             `No documentation page matches '${url}'`,
           );
         }
-        if (!assetExtensions.has(path.extname(decoded).toLowerCase())) {
+        if (!assetExtensions.has(extension)) {
           throw new AuthoringError(
             "UNSUPPORTED_ASSET",
             `Unsupported asset '${decoded}'. Use a raster image, PDF, or plain text file`,
           );
         }
-        if (
-          isImage &&
-          [".pdf", ".txt"].includes(path.extname(decoded).toLowerCase())
-        ) {
+        if (isImage && [".pdf", ".txt"].includes(extension)) {
           throw new AuthoringError(
             "INVALID_IMAGE",
             "Images must reference a supported raster image",
           );
         }
-        await safeFile(project.contentsRoot, targetFile);
+        if (!assetExists) await safeFile(project.contentsRoot, targetFile);
         const source = relativeSource(project.root, targetFile);
         const destination = `_assets/${relativeSource(project.contentsRoot, targetFile)}`;
         const key = destination.normalize("NFC").toLowerCase();
