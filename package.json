@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Headless Markdown documentation compiler for mdd",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wgtechlabs/mdd-engine.git"
