@@ -66,7 +66,7 @@ The result includes:
 - `assets`: referenced content files with checkout-relative sources, documentation-root-relative destinations, and public URLs.
 - `theme`: the built-in default or selected theme file locations.
 
-Paths in the model use forward slashes. Resolve sources against the same `projectDir` used to compile. Prefix asset destinations with the documentation output directory when exporting; do not prefix them with a GitHub repository name a second time. The engine emits no files and starts no server.
+Paths in the model use forward slashes. Resolve sources against the same `projectDir` used to compile. Asset destinations are filesystem paths, while asset URLs and page routes are URL-encoded. Decode page-route segments when deriving output directories. Prefix asset destinations with the documentation output directory when exporting; do not prefix them with a GitHub repository name a second time. The engine emits no files and starts no server.
 
 ## Markdown and components
 

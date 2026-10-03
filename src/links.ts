@@ -149,8 +149,8 @@ export async function resolveLinks(
         }
         await safeFile(project.contentsRoot, targetFile);
         const source = relativeSource(project.root, targetFile);
-        const destination = `_assets/${encodePath(relativeSource(project.contentsRoot, targetFile))}`;
-        const key = destination.toLowerCase();
+        const destination = `_assets/${relativeSource(project.contentsRoot, targetFile)}`;
+        const key = destination.normalize("NFC").toLowerCase();
         const existing = destinations.get(key);
         if (existing && existing !== source)
           throw new AuthoringError(
@@ -161,7 +161,7 @@ export async function resolveLinks(
         const asset = {
           source,
           destination,
-          url: publicUrl(basePath, destination),
+          url: publicUrl(basePath, encodePath(destination)),
         };
         assets.set(source, asset);
         node.url =

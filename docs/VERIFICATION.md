@@ -7,7 +7,7 @@ Verified October 3, 2026 on the `feature/headless-engine` implementation. This r
 | Frozen Bun installation | Passed with Bun 1.3.10 and committed `bun.lock` |
 | Biome formatting/lint | Passed |
 | TypeScript check and declaration build | Passed |
-| Bun unit/integration tests | 75 passed, 0 failed; 241 assertions |
+| Bun unit/integration tests | 76 passed, 0 failed; 244 assertions |
 | Coverage | 96.74% lines, 94.38% functions |
 | Dependency audit | No vulnerabilities reported by `bun audit` |
 | Packed package consumer | Passed on Node 22.0.0, 22.16.0, 24.21.0, and 26.10.0 |

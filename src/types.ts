@@ -44,7 +44,7 @@ export interface NavigationItem {
 export interface Asset {
   /** POSIX path relative to projectDir; consumers resolve against the same checkout. */
   source: string;
-  /** Encoded output path relative to the documentation root. */
+  /** Filesystem output path relative to the documentation root; not URL-encoded. */
   destination: string;
   url: string;
 }

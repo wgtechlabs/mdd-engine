@@ -23,6 +23,27 @@ async function fixture(files: Record<string, string>): Promise<string> {
 }
 
 describe("compileProject", () => {
+  test("separates filesystem asset destinations from encoded public URLs", async () => {
+    const projectDir = await fixture({
+      "contents/index.md": "# Home\n\n![Café](<assets/café logo.png>)",
+      "contents/assets/café logo.png": "image",
+    });
+    const { site, diagnostics } = await compileProject({
+      projectDir,
+      basePath: "/docs/",
+    });
+    expect(diagnostics).toEqual([]);
+    expect(site?.assets[0]).toEqual({
+      source: "mdd/contents/assets/café logo.png",
+      destination: "_assets/assets/café logo.png",
+      url: "/docs/_assets/assets/caf%C3%A9%20logo.png",
+    });
+    const asset = site?.assets[0];
+    if (!asset) throw new Error("Expected the referenced asset");
+    expect(decodeURIComponent(asset.url.slice("/docs/".length))).toBe(
+      asset.destination,
+    );
+  });
   test("uses uppercase Markdown extensions consistently in folder landing pages", async () => {
     const projectDir = await fixture({
       "contents/index.md": "# Home",
