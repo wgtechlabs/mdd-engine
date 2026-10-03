@@ -79,7 +79,7 @@ with:
   release-package-manager: bun
 ```
 
-The installed caller is [.github/workflows/build.yml](.github/workflows/build.yml), pinned to a reviewed immutable SHA with its release-version comment. Package and release flows are configured, but actual publication is hard-locked until the prerequisites in [docs/RELEASING.md](docs/RELEASING.md) are resolved. Do not remove the locks as part of ordinary feature work.
+The installed caller is [.github/workflows/build.yml](.github/workflows/build.yml), pinned to a reviewed immutable SHA. Package publication and GitHub Release creation are enabled for eligible pushes to `main`; dev, PR, and manual artifact publication are disabled. Promoting a PR to `main` can publish a release, so require explicit merge/release authorization and follow [docs/RELEASING.md](docs/RELEASING.md).
 
 Use explicit Bun install/lint/typecheck/test/coverage/build commands supported by the package. The inspected `node-bun` defaults contain npm fallbacks; a failed Bun check must not turn into a successful fallback. Keep required security checks and run the Node package smoke check under each configured Node matrix version as part of the build gate. Do not claim that a parallel CodeQL job gates release unless its dependencies enforce that.
 
@@ -87,11 +87,11 @@ Use one compatible package identity/version for both registries; identity is `@w
 
 Required sequencing: validate source → finalize release source/version → build package → confirm successful publication to BOTH registries → publish GitHub Release. Partial registry publication is incomplete and must not unlock release. Do not silently change existing primitive defaults; document consumer policy overrides such as non-main artifact publishing.
 
-### Known release prerequisite
+### Release gate contract
 
-At inspected build-flow-action commit `d2815cb7422384bccfccc7d2f5953afffb3a3566`, the pinned package primitive `9be4582316267a397955254e0f80cfe0b9454ab2` reports aggregate success if either registry succeeds, and the release job checks that aggregate. Therefore `package-registry: both` alone does not enforce this repository's requirement.
+The package primitive reports aggregate success if either registry succeeds. The pinned Build Flow revision separately requires all selected registries to publish and the complete package job to succeed before GitHub Release. Required CI and CodeQL must succeed before source finalization or publication.
 
-Before a production release, refresh upstream and select or implement an authorized correction that gates on both per-registry results and successful package-job completion. Do not silently change the primitive's aggregate-output meaning. Record proof that failure on either registry blocks GitHub Release. This prerequisite does not block local engine implementation.
+Preserve these guarantees when upgrading the upstream revision. Verify that failure on either registry, a later package step, or required security analysis blocks the release. Do not replace these checks with the primitive's aggregate output or change its documented meaning.
 
 ## Verification and completion
 

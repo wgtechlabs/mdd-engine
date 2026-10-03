@@ -4,7 +4,7 @@ The headless Markdown documentation compiler behind mdd. Give it a local project
 
 Built with TypeScript and Bun. Runs on Node.js 22, 24, and 26 without Bun. The default is the latest Node LTS, currently pinned to **24.21.0**.
 
-> Initial implementation. The package has not been published; the npm and GitHub Packages release paths remain locked while upstream release prerequisites are addressed. See [releasing](docs/RELEASING.md).
+> Initial implementation. Publishing to npm and GitHub Packages is configured for eligible pushes to `main`. Verify the first release before using registry installation instructions. See [releasing](docs/RELEASING.md).
 
 ## A documentation project
 

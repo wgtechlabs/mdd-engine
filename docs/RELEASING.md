@@ -1,51 +1,50 @@
 # Releasing mdd-engine
 
-## Current state: validation enabled, publishing locked
+## Automatic publication on main
 
-[Build Flow](../.github/workflows/build.yml) calls `wgtechlabs/build-flow-action` v0.3.1 at immutable commit `260b9a063ef59ccc760155c19902320feb7e25cb`. Package and release flows are configured, with npm and GitHub Packages selected, but publication is deliberately disabled until the prerequisites below are satisfied. No repository variable can bypass this lock.
+[Build Flow](../.github/workflows/build.yml) enables package publication and GitHub Release creation for eligible pushes to `main`. It publishes `@wgtechlabs/mdd-engine` to both npm (`registry.npmjs.org`) and GitHub Packages (`npm.pkg.github.com`). This package does not publish a container image to GHCR.
 
-Pull requests to `dev`/`main`, pushes to those branches, and manual runs execute validation. The caller disables dev, PR, and manual artifact publishing as an explicit consumer policy. On main, the upstream version plan is a dry run with a read-only token. `package-publish-enabled: false` prevents source finalization, version/changelog commits, tags, and package publishing; `release-create: false` additionally prevents a GitHub Release. Container publishing remains disabled by the upstream default.
+The caller pins the reviewed upstream release-gate correction at `35eca9d85f095305b04a92d4bcc960b127a674b6`, tracked in [Build Flow PR #54](https://github.com/wgtechlabs/build-flow-action/pull/54). Complete upstream review and verify its checks before promoting this caller to `main`. The first version plan has been verified as `0.1.0` in the [main validation run](https://github.com/wgtechlabs/mdd-engine/actions/runs/37107277522); the release tag is `v0.1.0` and the npm dist-tag is `latest`.
 
-Do not remove one lock merely to make a release run. The current upstream cannot enforce this repository's dual-registry requirement.
+PRs, pushes to `dev`, and manual runs validate changes without publishing artifacts. Promoting this configuration to `main` enables the release path. Use a regular merge commit for the `dev` → `main` promotion and obtain explicit merge/release authorization.
 
-## Toolchain and checks
+## Required sequence
 
-- `packageManager: bun@1.3.10` in `package.json` selects Bun through the upstream `setup-bun` action. CI also checks the installed version. Commit `bun.lock`; frozen installs must fail on drift.
-- Node 24.21.0 is the pinned default LTS runtime. The CI matrix selects current patches of Node 22, 24, and 26 independently of that default.
-- CI explicitly runs `lint`, `typecheck`, `test`, `coverage`, and `build` through Bun. It then runs `smoke`, which must execute the packed package with the real Node binary in that matrix job. Bun tests alone do not demonstrate Node compatibility.
-- All CI command overrides fail on an error. They deliberately replace upstream's `bun ... || npm ... --if-present` defaults, which can hide failures.
-- CodeQL uses `codeql-build-mode: none`: JavaScript/TypeScript analysis reads source and does not support the upstream `autobuild` default. This mode skips the upstream setup/install/build commands, so the separate scan job does not require Bun; the Node matrix still runs the full package build and smoke check.
-- The upstream Gitleaks and CodeQL checks remain enabled. Its CodeQL job runs alongside the release path; v0.3.1 does **not** enforce CodeQL completion before publishing. This must be addressed before removing the release lock so all required security checks gate publication.
-- `release-package-manager: bun` configures workspace detection. It is not a Bun runtime installation setting.
+1. CI runs the Bun checks and packed-package smoke check on Node 22, 24, and 26. Dependency auditing and Gitleaks must pass.
+2. Enabled CodeQL analysis must succeed before source finalization or publication.
+3. Build Flow finalizes the planned version, source commit, changelog, and tag once.
+4. The package job checks out that exact finalized commit, builds the package, and publishes to both registries.
+5. Both registry results must report success and the complete package job must succeed before Build Flow creates the GitHub Release.
 
-## Upstream release prerequisites
+The package primitive's `artifact-published` output means at least one registry published. Build Flow checks complete publication separately; the aggregate flag alone is insufficient. Failure of either registry, a later package step, or required security analysis must prevent the GitHub Release. Preserve these guarantees when upgrading the workflow pin.
 
-Inspection on October 3, 2026 confirmed that [Build Flow v0.3.1](https://github.com/wgtechlabs/build-flow-action/blob/260b9a063ef59ccc760155c19902320feb7e25cb/.github/workflows/app.yml) pins package primitive v2.2.0 at `9be4582316267a397955254e0f80cfe0b9454ab2`.
+## Toolchain and credentials
 
-That primitive's [`artifact-published` output](https://github.com/wgtechlabs/package-build-flow-action/blob/9be4582316267a397955254e0f80cfe0b9454ab2/scripts/build-and-publish.sh#L13) is true if **either** registry succeeds. Its [planned publication failure check](https://github.com/wgtechlabs/package-build-flow-action/blob/9be4582316267a397955254e0f80cfe0b9454ab2/scripts/build-and-publish.sh#L422) fails only when neither succeeds. Build Flow's [GitHub Release gate](https://github.com/wgtechlabs/build-flow-action/blob/260b9a063ef59ccc760155c19902320feb7e25cb/.github/workflows/app.yml#L1237) checks that aggregate output without requiring the package job itself to have succeeded. A partial registry publication, or a failure after publication, can therefore unlock the GitHub Release.
+- `packageManager: bun@1.3.10` selects Bun for installation, development checks, builds, and publishing. Commit `bun.lock` and use frozen installs in CI.
+- Node 24.21.0 is the pinned default LTS runtime. The compatibility matrix also covers Node 22 and 26; smoke checks execute the packed package in real Node processes without Bun.
+- Explicit CI overrides propagate failures. The build check includes `bun audit` before publication; the primitive's own audit runs after publishing and is not a substitute for this gate.
+- CodeQL uses `codeql-build-mode: none` for JavaScript/TypeScript source analysis.
+- `NPM_TOKEN` is inherited from GitHub Actions secrets. It must have publish access for the npm scope. The organization secret is available to this repository, but secret metadata does not verify its registry permissions or expiry.
+- GitHub Packages and GitHub Release creation use the built-in `GITHUB_TOKEN`. Preserve the caller's required permissions and allow the authorized release commit/tag on `main`.
+- Retain the MIT `LICENSE` in the package and the repository metadata linking it to `wgtechlabs/mdd-engine`.
 
-Before the first production release, select a reviewed upstream revision that enforces all of these conditions:
+## Verify a release
 
-1. Required validation and security jobs succeed before publication.
-2. Release source/version is finalized once; the package is built from that exact finalized commit.
-3. Both `npm-published` and `github-published` are true and the complete package job succeeds before the GitHub Release is published.
-4. Failure of either registry, a post-publish check, or a required security job prevents the GitHub Release. Verify these failure cases with upstream workflow evidence.
+After the main workflow completes, verify the actual version in both registries, package contents and integrity, GitHub package visibility, and the GitHub Release tag/commit. GitHub Packages may initially be private; confirm the intended public visibility. Successful validation or an accepted workflow run does not prove publication.
 
-Keep the primitive's documented aggregate output meaning intact. Do not invent unsupported caller inputs or copy release implementation into this repository. The correction belongs in the separately maintained Build Flow projects; this repository should consume its reviewed release.
+The packed package must contain runtime JavaScript, TypeScript declarations, README, and LICENSE, while excluding tests, credentials, caches, and development files. Before the first release or a compatibility change, verify current Node 22/24/26 and the lowest version claimed by `engines.node`.
 
-Registry publishing is not atomic. If one registry succeeds, do not delete a published version or pretend the release completed. Verify the published version and package contents, then use a reviewed recovery path to complete the missing registry. Confirm that recovery before enabling automation.
+## Recover partial publication
 
-## First-release checklist
+Registry publication is not atomic. If one registry succeeds and the other fails, the GitHub Release must remain unpublished. Do not delete the published version or blindly rerun the whole workflow: the primitive attempts both registries again and does not treat an existing version as a successful retry.
 
-1. Confirm `@wgtechlabs/mdd-engine` ownership and publish access in both registries, intended public visibility, and package repository metadata. The license is MIT, selected by the owner; retain `LICENSE` in the published package.
-2. Inspect the packed package: runtime JavaScript and declarations present; tests, credentials, caches, and development files excluded. Run the packed-package smoke check in actual Node 22/24/26 and the lowest Node version claimed by `engines.node`.
-3. Complete the upstream prerequisites above and update the immutable workflow SHA plus its release-version comment. Verify Bun 1.3.10 selection and default parity at the new pin. The current pin has some floating transitive action references; an immutable caller pin alone does not pin those dependencies.
-4. Configure `NPM_TOKEN` as a GitHub Actions secret with the required npm publish access. GitHub Packages and release operations use the built-in `GITHUB_TOKEN`. Never commit tokens or place them in workflow inputs as literal values. Supply any organization-required Gitleaks license through `GITLEAKS_LICENSE`.
-5. Preserve the required caller permissions. Review branch protections and GitHub Actions permissions so the release workflow can perform its authorized version commit/tag on main. Configure required CI/security checks before promotion.
-6. In a reviewed change, set `package-publish-enabled` and `release-create` to `true`. Keep non-main publication disabled. Removing this lock authorizes the next eligible main push to publish; it is a separate release decision, not part of local package implementation.
+1. Record the finalized tag/commit, exact package version, successful registry, and failed job logs. Correct the failed registry's credentials or access issue.
+2. Retrieve the published tarball from the successful registry and verify its identity, version, metadata, integrity, and contents against the finalized source. Preserve those package bytes for recovery.
+3. With explicit publication authorization, publish that verified tarball only to the missing registry using its own credentials. Do not rebuild a different artifact or change the released version.
+4. Verify the same version and package contents in both registries and all required checks on the finalized source. Only then create the GitHub Release for the existing verified tag with explicit release authorization.
 
-## Normal delivery after release readiness
+This is a manual recovery procedure, not automatic retry support. No live partial-publication recovery has been exercised for mdd-engine.
 
-Follow Clean Workflow: work on a short-lived branch from `dev`, squash its pull request into `dev`, and promote `dev` to `main` through a regular merge commit using a meaningful `🚀 release:` title. Use the Clean Commit convention recorded in [AGENTS.md](../AGENTS.md).
+## Normal delivery
 
-The required order is validation → finalized release commit/version → package build → confirmed publication to **both** registries → GitHub Release. After a run, verify the actual npm and GitHub Packages versions and the GitHub Release tag/commit. A queued workflow, accepted publish request, or aggregate publication flag is not completion evidence.
+Work on a short-lived branch from `dev`, squash its PR into `dev`, and promote `dev` to `main` through a regular merge commit with a meaningful `🚀 release:` title. See [AGENTS.md](../AGENTS.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).
