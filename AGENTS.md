@@ -79,11 +79,11 @@ with:
   release-package-manager: bun
 ```
 
-This block records the required configuration; it is not an installed or exercised workflow. Wire the actual caller during package bootstrap, once the package scripts exist and the release prerequisites below are resolved. Pin the reviewed reusable workflow to an immutable SHA with its release-version comment.
+The installed caller is [.github/workflows/build.yml](.github/workflows/build.yml), pinned to a reviewed immutable SHA with its release-version comment. Package and release flows are configured, but actual publication is hard-locked until the prerequisites in [docs/RELEASING.md](docs/RELEASING.md) are resolved. Do not remove the locks as part of ordinary feature work.
 
 Use explicit Bun install/lint/typecheck/test/coverage/build commands supported by the package. The inspected `node-bun` defaults contain npm fallbacks; a failed Bun check must not turn into a successful fallback. Keep required security checks and run the Node package smoke check under each configured Node matrix version as part of the build gate. Do not claim that a parallel CodeQL job gates release unless its dependencies enforce that.
 
-Use one compatible package identity/version for both registries; proposed identity is `@wgtechlabs/mdd-engine`, pending ownership/availability verification. Confirm license, registry scope access, package contents, and public visibility before publishing. Keep `NPM_TOKEN` in GitHub secrets. Use the built-in `GITHUB_TOKEN` with the required package/release scopes for GitHub; never hardcode or log tokens. Retain the caller permissions required by any enabled comments or security features.
+Use one compatible package identity/version for both registries; identity is `@wgtechlabs/mdd-engine`, pending registry publish-access verification. Confirm license, registry scope access, package contents, and public visibility before publishing. Keep `NPM_TOKEN` in GitHub secrets. Use the built-in `GITHUB_TOKEN` with the required package/release scopes for GitHub; never hardcode or log tokens. Retain the caller permissions required by any enabled comments or security features.
 
 Required sequencing: validate source → finalize release source/version → build package → confirm successful publication to BOTH registries → publish GitHub Release. Partial registry publication is incomplete and must not unlock release. Do not silently change existing primitive defaults; document consumer policy overrides such as non-main artifact publishing.
 

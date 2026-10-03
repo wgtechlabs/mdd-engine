@@ -1,6 +1,6 @@
 # mdd-engine specification
 
-Status: proposed v0.1 implementation contract; no implementation yet. Product boundaries and toolchain below were confirmed by the user on October 3, 2026.
+Status: v0.1 engine implemented for review. Product boundaries and toolchain were confirmed by the user on October 3, 2026. Publication remains locked; see RELEASING.md and VERIFICATION.md.
 
 ## Purpose and ownership
 
@@ -24,7 +24,7 @@ There is one content compiler. mdd and CI consume this contract rather than recr
 
 Sources: [Node releases](https://nodejs.org/en/about/previous-releases), [Bun build targets and TypeScript limitations](https://bun.sh/docs/bundler), [Bun lockfile](https://bun.sh/docs/pm/lockfile).
 
-## Proposed public API
+## Public API
 
 ```ts
 compileProject({
@@ -58,13 +58,13 @@ mdd/
     get-started/index.md
     get-started/installation.md
     faqs/index.md
-    assets/logo.svg
+    assets/logo.png
   themes/
     custom/theme.css
     custom/theme.js
 ```
 
-Proposed `config.json`:
+`config.json`:
 
 ```json
 {
@@ -96,13 +96,13 @@ Preserve folder/file stems, encoding URL segments correctly. Recommend kebab-cas
 
 Folders form navigation groups. A folder index provides the landing page and group metadata; without an index, the group is non-clickable. Optional YAML frontmatter supports only `title`, `description`, `navTitle`, and numeric `order` initially.
 
-Title precedence: frontmatter title, first H1, readable filename. Navigation label: `navTitle`, then title. Explicitly ordered siblings sort first, then deterministic label/path ordering. Define stable heading IDs, including duplicate-heading suffixes, using maintained tooling.
+Title precedence: frontmatter title, first H1, readable filename. Navigation label: `navTitle`, then title. Explicitly ordered siblings sort first, then deterministic label/path ordering. Heading IDs use `mdd-` plus github-slugger output, including duplicate suffixes. Human fragment links without the prefix are resolved and rewritten to the final ID.
 
 Resolve relative `.md` links and local image references against their source file, then map to public routes. For v0.1, leading-slash content links address the documentation root, not an unrelated host homepage; prepend the effective base path. External absolute URLs remain external. Validate local targets and anchors after all pages are known. Do not make network requests to validate external links during compilation.
 
 ## Markdown components and headless output
 
-Use an established Markdown parser with a documented GFM subset (tables, task lists, strikethrough) and directive support. Proposed first component set: `note`, `tip`, `warning`, and `details`.
+Use an established Markdown parser with a documented GFM subset (tables, task lists, strikethrough) and directive support. First component set: `note`, `tip`, `warning`, and `details`.
 
 ```markdown
 :::note
@@ -132,3 +132,9 @@ Sources: [remark-gfm](https://github.com/remarkjs/remark-gfm), [remark-directive
 8. Build Flow validates, builds, and publishes the same release version to both registries before GitHub Release completion is reported.
 
 Use a small fixture-based Bun test suite plus one Node package smoke check reused across the compatibility matrix. Exact parser dependencies and API field names may be refined before the first release; preserve these ownership boundaries.
+
+## v0.1 implementation details
+
+The implementation exports `compileProject` and its framework-independent types from the package root. It emits Node ESM and declarations. Content discovery rejects symlink entries, while configured directories are resolved within the checkout. Active content asset formats are deferred: v0.1 accepts raster images (PNG/JPEG/GIF/WebP/AVIF/ICO), PDF, and plain text. Asset bytes are not sanitized; serving policy belongs to mdd. `_assets/`, `_mdd/`, `markdown/`, `mdd-build.json`, `llms.txt`, `sitemap.xml`, `robots.txt`, and `404.html` are reserved output paths. Custom theme files remain a separate trusted boundary and are never executed by this engine.
+
+The dual-registry publication acceptance criterion is a pre-release gate. Local engine completion does not imply package publication or a GitHub Release.
