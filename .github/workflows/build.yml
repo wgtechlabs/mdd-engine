@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build-flow:
-    uses: wgtechlabs/build-flow-action/.github/workflows/app.yml@35eca9d85f095305b04a92d4bcc960b127a674b6 # release gates (upstream PR #54)
+    uses: wgtechlabs/build-flow-action/.github/workflows/app.yml@721e590fb0be0b8622839cd8226b39f8beac33dd # v0.3.3
     secrets: inherit
     with:
       ci-profile: node-bun

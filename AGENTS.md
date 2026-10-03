@@ -79,7 +79,7 @@ with:
   release-package-manager: bun
 ```
 
-The installed caller is [.github/workflows/build.yml](.github/workflows/build.yml), pinned to a reviewed immutable SHA. Package publication and GitHub Release creation are enabled for eligible pushes to `main`; dev, PR, and manual artifact publication are disabled. Promoting a PR to `main` can publish a release, so require explicit merge/release authorization and follow [docs/RELEASING.md](docs/RELEASING.md).
+The installed caller is [.github/workflows/build.yml](.github/workflows/build.yml), pinned to the immutable commit for Build Flow v0.3.3. Package publication and GitHub Release creation are enabled for eligible pushes to `main`; dev, PR, and manual artifact publication are disabled. Promoting a PR to `main` can publish a release, so require explicit merge/release authorization and follow [docs/RELEASING.md](docs/RELEASING.md).
 
 Use explicit Bun install/lint/typecheck/test/coverage/build commands supported by the package. The inspected `node-bun` defaults contain npm fallbacks; a failed Bun check must not turn into a successful fallback. Keep required security checks and run the Node package smoke check under each configured Node matrix version as part of the build gate. Do not claim that a parallel CodeQL job gates release unless its dependencies enforce that.
 

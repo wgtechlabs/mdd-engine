@@ -4,7 +4,7 @@
 
 [Build Flow](../.github/workflows/build.yml) enables package publication and GitHub Release creation for eligible pushes to `main`. It publishes `@wgtechlabs/mdd-engine` to both npm (`registry.npmjs.org`) and GitHub Packages (`npm.pkg.github.com`). This package does not publish a container image to GHCR.
 
-The caller pins the reviewed upstream release-gate correction at `35eca9d85f095305b04a92d4bcc960b127a674b6`, tracked in [Build Flow PR #54](https://github.com/wgtechlabs/build-flow-action/pull/54). Complete upstream review and verify its checks before promoting this caller to `main`. The first version plan has been verified as `0.1.0` in the [main validation run](https://github.com/wgtechlabs/mdd-engine/actions/runs/37107277522); the release tag is `v0.1.0` and the npm dist-tag is `latest`.
+The caller pins [Build Flow v0.3.3](https://github.com/wgtechlabs/build-flow-action/releases/tag/v0.3.3) at immutable commit `721e590fb0be0b8622839cd8226b39f8beac33dd`. The release-gate correction was reviewed in [PR #54](https://github.com/wgtechlabs/build-flow-action/pull/54) and promoted through [PR #55](https://github.com/wgtechlabs/build-flow-action/pull/55); both are merged and their required checks passed. The first version plan has been verified as `0.1.0` in the [main validation run](https://github.com/wgtechlabs/mdd-engine/actions/runs/37107277522); the release tag is `v0.1.0` and the npm dist-tag is `latest`.
 
 PRs, pushes to `dev`, and manual runs validate changes without publishing artifacts. Promoting this configuration to `main` enables the release path. Use a regular merge commit for the `dev` → `main` promotion and obtain explicit merge/release authorization.
 
