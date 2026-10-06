@@ -97,9 +97,11 @@ export async function resolveLinks(
           );
         let target = !decoded ? page : byFile.get(targetFile);
         const extension = path.extname(decoded).toLowerCase();
-        let assetExists = false;
+        let asset = decoded.endsWith("/") ? undefined : assets.get(targetFile);
+        let assetExists = asset !== undefined;
         if (
           !target &&
+          !assetExists &&
           !decoded.endsWith("/") &&
           assetExtensions.has(extension)
         ) {
@@ -165,23 +167,25 @@ export async function resolveLinks(
             "Images must reference a supported raster image",
           );
         }
-        if (!assetExists) await safeFile(project.contentsRoot, targetFile);
-        const source = relativeSource(project.root, targetFile);
-        const destination = `_assets/${relativeSource(project.contentsRoot, targetFile)}`;
-        const key = destination.normalize("NFC").toLowerCase();
-        const existing = destinations.get(key);
-        if (existing && existing !== source)
-          throw new AuthoringError(
-            "ASSET_COLLISION",
-            `Asset output collides with ${existing}`,
-          );
-        destinations.set(key, source);
-        const asset = {
-          source,
-          destination,
-          url: publicUrl(basePath, encodePath(destination)),
-        };
-        assets.set(source, asset);
+        if (!asset) {
+          if (!assetExists) await safeFile(project.contentsRoot, targetFile);
+          const source = relativeSource(project.root, targetFile);
+          const destination = `_assets/${relativeSource(project.contentsRoot, targetFile)}`;
+          const key = destination.normalize("NFC").toLowerCase();
+          const existing = destinations.get(key);
+          if (existing && existing !== source)
+            throw new AuthoringError(
+              "ASSET_COLLISION",
+              `Asset output collides with ${existing}`,
+            );
+          destinations.set(key, source);
+          asset = {
+            source,
+            destination,
+            url: publicUrl(basePath, encodePath(destination)),
+          };
+          assets.set(targetFile, asset);
+        }
         node.url =
           asset.url + query + (hash ? `#${encodeURIComponent(hash)}` : "");
       } catch (error) {
@@ -198,17 +202,6 @@ export async function resolveLinks(
             severity: "error",
             code: "INVALID_LINK",
             message: `Malformed URL encoding in '${url}'`,
-            ...location,
-          });
-        else if (
-          error instanceof Error &&
-          "code" in error &&
-          error.code === "ENOENT"
-        )
-          diagnostics.push({
-            severity: "error",
-            code: "MISSING_ASSET",
-            message: `Asset not found: '${url}'`,
             ...location,
           });
         else

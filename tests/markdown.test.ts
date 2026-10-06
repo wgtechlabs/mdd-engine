@@ -113,6 +113,52 @@ Pay attention.
     expect(diagnostics[0]).toMatchObject({ code, file: "page.md", line: 1 });
   });
 
+  test("discards raw HTML without losing locations, content, or Markdown spacing", async () => {
+    const diagnostics: Diagnostic[] = [];
+    const document = parseDocument(
+      `<script>top</script>
+
+Before <b>bold</b> after.
+
+:::note[Remember]
+<script>nested</script>
+
+First
+
+<div>removed</div>
+
+Last
+:::
+
+<script>end</script>`,
+      "page.md",
+      diagnostics,
+    );
+    expect(diagnostics).toEqual(
+      [
+        [1, 1],
+        [3, 8],
+        [3, 15],
+        [6, 1],
+        [10, 1],
+        [15, 1],
+      ].map(([line, column]) => ({
+        severity: "error",
+        code: "RAW_HTML",
+        message: "Raw HTML is not supported; use Markdown or an mdd component.",
+        file: "page.md",
+        line,
+        column,
+      })),
+    );
+    const before = structuredClone(document.tree);
+    expect(await renderDocument(document)).toEqual({
+      html: '<p>Before bold after.</p>\n<aside class="mdd-note">\n<p class="mdd-component-label"><strong>Remember</strong></p>\n<p>First</p>\n<p>Last</p>\n</aside>',
+      markdown: "Before bold after.\n\n> **Remember**\n>\n> First\n>\n> Last\n",
+    });
+    expect(document.tree).toEqual(before);
+  });
+
   test("rejects executable URLs in inline, image, and reference links", async () => {
     const diagnostics: Diagnostic[] = [];
     const document = parseDocument(

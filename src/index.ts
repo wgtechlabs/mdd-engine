@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { resolveLinks, type SourcePage } from "./links.js";
-import { parseDocument, renderDocument } from "./markdown.js";
+import {
+  type ParsedDocument,
+  parseDocument,
+  renderDocument,
+} from "./markdown.js";
 import { loadProject, relativeSource } from "./project.js";
 import {
   navigationFor,
@@ -38,6 +42,22 @@ const reserved = new Set([
   "robots.txt",
   "404.html",
 ]);
+
+function nestingDiagnostic(error: unknown, file: string): Diagnostic {
+  // V8 reports this error for excessive nesting in both parsing and rendering.
+  if (
+    !(error instanceof RangeError) ||
+    error.message !== "Maximum call stack size exceeded"
+  )
+    throw error;
+  return {
+    severity: "error",
+    code: "CONTENT_TOO_DEEP",
+    message:
+      "Markdown nesting is too deep; reduce nested blocks or formatting.",
+    file,
+  };
+}
 
 /** Compile a local checkout; never fetch repositories, execute author code, or emit files. */
 export async function compileProject(
@@ -84,11 +104,14 @@ export async function compileProject(
         file: source,
       });
     routes.set(key, source);
-    const document = parseDocument(
-      await readFile(file, "utf8"),
-      source,
-      diagnostics,
-    );
+    const text = await readFile(file, "utf8");
+    let document: ParsedDocument;
+    try {
+      document = parseDocument(text, source, diagnostics);
+    } catch (error) {
+      diagnostics.push(nestingDiagnostic(error, source));
+      return { diagnostics };
+    }
     sources.push({ file, relative, route, document });
   }
   const assets = await resolveLinks(sources, project, basePath, diagnostics);
@@ -97,7 +120,15 @@ export async function compileProject(
   const pages: Page[] = [];
   for (const source of sources) {
     const { document } = source;
-    const rendered = await renderDocument(document);
+    let rendered: { html: string; markdown: string };
+    try {
+      rendered = await renderDocument(document);
+    } catch (error) {
+      diagnostics.push(
+        nestingDiagnostic(error, relativeSource(project.root, source.file)),
+      );
+      return { diagnostics };
+    }
     pages.push({
       source: relativeSource(project.root, source.file),
       route: source.route,
