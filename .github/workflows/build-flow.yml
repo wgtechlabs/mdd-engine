@@ -21,10 +21,9 @@ jobs:
     uses: wgtechlabs/build-flow-action/.github/workflows/app.yml@f8263c388160a62f4a0e72ed888e56c8e9159469 # v1.0.0
     secrets: inherit
     with:
-      ci-profile: node-bun
+      # The Bun lockfile selects the default node-bun profile/package manager.
       # JavaScript/TypeScript CodeQL analyzes source without a compiler build.
       codeql-build-mode: none
-      ci-runtime-version: '24.21.0'
       ci-matrix-versions: '["22","24","26"]'
       # setup-bun reads packageManager: bun@1.3.10 from package.json.
       ci-setup-command: test "$(bun --version)" = '1.3.10'
@@ -35,18 +34,4 @@ jobs:
       ci-coverage-command: bun run coverage
       ci-build-command: bun run build && bun run smoke && bun audit
       enable-package: true
-      enable-release: true
-      package-registry: both
-      package-npm-auth-method: oidc
-      package-manager: bun
-      release-package-manager: bun
-
-      # Use Build Flow's default dev publishing; PR/manual runs validate only.
-      publish-pr-artifacts: false
-      publish-manual-artifacts: false
-
-      # The pinned workflow gates publication on CI/security and requires both
-      # registries plus successful package-job completion before GitHub Release.
-      # The pinned policy also treats manual runs on dev as dev events.
-      package-publish-enabled: ${{ github.event_name == 'push' }}
-      release-create: true
+      # Inherit dev/PR/manual publishing, both registries, npm OIDC, and releases.

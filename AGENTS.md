@@ -66,29 +66,23 @@ Use GHLT for authorized Clean Labels template setup. Preserve existing labels; a
 
 ## Build, package, and release policy
 
-Use `wgtechlabs/build-flow-action` reusable workflows rather than inventing a new release pipeline. Package and release flows must be enabled for this repository, with both npm and GitHub Packages selected:
+Use `wgtechlabs/build-flow-action` reusable workflows rather than inventing a new release pipeline. Enable the package flow explicitly; inherit the pinned defaults for releases, both npm and GitHub Packages, OIDC, and development/PR/manual publication. Keep project-specific validation inputs in the caller:
 
 ```yaml
 with:
-  ci-profile: node-bun
   ci-matrix-versions: '["22","24","26"]'
   enable-package: true
-  enable-release: true
-  package-registry: both
-  package-npm-auth-method: oidc
-  package-manager: bun
-  release-package-manager: bun
 ```
 
-The caller is [.github/workflows/build-flow.yml](.github/workflows/build-flow.yml). It pins released Build Flow v1.0.0 at immutable commit `f8263c388160a62f4a0e72ed888e56c8e9159469`. The package primitive is the released v2.3.0. Do not claim OIDC is active from an action release or a validation run alone. Omit `publish-dev-artifacts` to inherit Build Flow's `true` default: eligible `dev` pushes publish `<base-version>-dev.<short-sha>` packages with the `dev` dist-tag to both registries. Development builds are the project standard; do not disable them without an explicit request. Eligible `main` pushes publish regular packages and a GitHub Release; PR and manual artifact publication remain disabled. Merging into `dev` or `main` can publish packages, so honor the authorized merge/release scope and follow [docs/RELEASING.md](docs/RELEASING.md).
+The caller is [.github/workflows/build-flow.yml](.github/workflows/build-flow.yml). It pins released Build Flow v1.0.0 at immutable commit `f8263c388160a62f4a0e72ed888e56c8e9159469`. The package primitive is the released v2.3.0. Do not claim OIDC is active from an action release or a validation run alone. Omit `publish-dev-artifacts`, `publish-pr-artifacts`, `publish-manual-artifacts`, and `package-publish-enabled` to inherit their `true` defaults. Development and preview builds are the project standard; do not disable them without an explicit request. Eligible PRs targeting `dev` use `pr`, dev pushes and promotion PRs use `dev`, other PRs targeting `main` use `patch`, and manual runs use `wip`. Eligible `main` pushes publish regular packages and a GitHub Release. Updating a PR can publish a preview; merging into `dev` or `main` can publish packages too. Honor the authorized delivery scope and follow [docs/RELEASING.md](docs/RELEASING.md).
 
 Use explicit Bun install/lint/typecheck/test/coverage/build commands supported by the package. The inspected `node-bun` defaults contain npm fallbacks; a failed Bun check must not turn into a successful fallback. Keep required security checks and run the Node package smoke check under each configured Node matrix version as part of the build gate. Do not claim that a parallel CodeQL job gates release unless its dependencies enforce that.
 
-Use one compatible package identity/version for both registries: `@wgtechlabs/mdd-engine`. Confirm license, registry access, package contents, and public visibility before publishing. The npm authentication is Trusted Publishing with OIDC, using npm CLI >=11.5.1 on the pinned Node 24.21.0 runtime. Retain `package-npm-auth-method: oidc` when upgrading the orchestrator. Configure npm to trust `wgtechlabs/mdd-engine` / `build-flow.yml`, allow direct `npm publish`, and preserve `id-token: write` through the reusable workflow chain. OIDC publishing must not require or fall back to `NPM_TOKEN`. GitHub Packages still uses the separate built-in `GITHUB_TOKEN` with `packages: write`, and GitHub Releases require `contents: write`. Never hardcode or log tokens; retain permissions required by enabled comments or security features.
+Use one compatible package identity/version for both registries: `@wgtechlabs/mdd-engine`. Confirm license, registry access, package contents, and public visibility before publishing. The npm authentication is Trusted Publishing with OIDC, using npm CLI >=11.5.1 on the pinned Node 24.21.0 runtime. Verify the inherited `package-npm-auth-method: oidc` default when upgrading the orchestrator. Configure npm to trust `wgtechlabs/mdd-engine` / `build-flow.yml`, allow direct `npm publish`, and preserve `id-token: write` through the reusable workflow chain. OIDC publishing must not require or fall back to `NPM_TOKEN`. GitHub Packages still uses the separate built-in `GITHUB_TOKEN` with `packages: write`, and GitHub Releases require `contents: write`. Never hardcode or log tokens; retain permissions required by enabled comments or security features.
 
 The first npm publication needs a one-time bootstrap if the package is absent. Use the preserved validated `0.1.0` tarball tied to the existing `v0.1.0` tag at finalized commit `3975075b4dee44806012e71d80e858ddcf2b39a9`; follow the verification and maintainer-authentication procedure in [docs/RELEASING.md](docs/RELEASING.md). Never rewrite the tag, duplicate an existing registry version, or blindly rerun a partial publication. Future eligible releases use automatic OIDC after the trusted publisher and workflow adoption are verified.
 
-Required sequencing on `main`: validate source → finalize release source/version → build package → confirm successful publication to BOTH registries → publish GitHub Release. Development builds validate and publish from the triggering commit without release finalization or a GitHub Release. Partial registry publication is incomplete and must not unlock release. Do not silently change existing primitive defaults; document consumer policy overrides such as non-main artifact publishing.
+Required sequencing on `main`: validate source → finalize release source/version → build package → confirm successful publication to BOTH registries → publish GitHub Release. Preview builds validate and publish from the triggering commit without release finalization or a GitHub Release. Partial registry publication is incomplete and must not unlock release. Preserve default bot detection and GitHub's fork-PR permission restrictions; never use `pull_request_target` to run contributor code with publishing credentials. Do not silently change existing primitive defaults; document the reason for any necessary consumer override.
 
 ### Release gate contract
 

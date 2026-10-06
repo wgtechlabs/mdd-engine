@@ -4,7 +4,7 @@ The headless Markdown documentation compiler behind mdd. Give it a local project
 
 Built with TypeScript and Bun. Runs on Node.js 22, 24, and 26 without Bun. The default is the latest Node LTS, currently pinned to **24.21.0**.
 
-> Build Flow is configured to publish development packages from `dev` with the `dev` dist-tag and regular releases from `main` to npm and GitHub Packages. See [releasing](docs/RELEASING.md).
+> Build Flow's default channels publish development, PR, and manual preview packages alongside regular releases to npm and GitHub Packages. See [build channels and releasing](docs/RELEASING.md).
 
 ## A documentation project
 
@@ -38,7 +38,7 @@ All settings are optional. Custom paths are relative to `mdd/config.json` and mu
 
 ## Compile without a website
 
-Install the regular package with `bun add @wgtechlabs/mdd-engine`. Once the first development build is published, use `bun add @wgtechlabs/mdd-engine@dev` to try the development version. You can also install a locally packed copy.
+Install the regular package with `bun add @wgtechlabs/mdd-engine`. After a successful preview publication, use `bun add @wgtechlabs/mdd-engine@dev` for development builds or `bun add @wgtechlabs/mdd-engine@pr` for PRs targeting `dev`. Preview tags track the most recently published package in their channel; install an exact version to test a particular PR. You can also install a locally packed copy.
 
 In your Node project:
 
