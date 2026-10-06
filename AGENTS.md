@@ -80,7 +80,7 @@ with:
   release-package-manager: bun
 ```
 
-The caller is [.github/workflows/build-flow.yml](.github/workflows/build-flow.yml). It pins released Build Flow v1.0.0 at immutable commit `f8263c388160a62f4a0e72ed888e56c8e9159469`. The package primitive is the released v2.3.0. Do not claim OIDC is active from an action release or a validation run alone. Package publication and GitHub Release creation are enabled for eligible pushes to `main`; dev, PR, and manual artifact publication are disabled. Promoting a PR to `main` can publish a release, so require explicit merge/release authorization and follow [docs/RELEASING.md](docs/RELEASING.md).
+The caller is [.github/workflows/build-flow.yml](.github/workflows/build-flow.yml). It pins released Build Flow v1.0.0 at immutable commit `f8263c388160a62f4a0e72ed888e56c8e9159469`. The package primitive is the released v2.3.0. Do not claim OIDC is active from an action release or a validation run alone. Omit `publish-dev-artifacts` to inherit Build Flow's `true` default: eligible `dev` pushes publish `<base-version>-dev.<short-sha>` packages with the `dev` dist-tag to both registries. Development builds are the project standard; do not disable them without an explicit request. Eligible `main` pushes publish regular packages and a GitHub Release; PR and manual artifact publication remain disabled. Merging into `dev` or `main` can publish packages, so honor the authorized merge/release scope and follow [docs/RELEASING.md](docs/RELEASING.md).
 
 Use explicit Bun install/lint/typecheck/test/coverage/build commands supported by the package. The inspected `node-bun` defaults contain npm fallbacks; a failed Bun check must not turn into a successful fallback. Keep required security checks and run the Node package smoke check under each configured Node matrix version as part of the build gate. Do not claim that a parallel CodeQL job gates release unless its dependencies enforce that.
 
@@ -88,7 +88,7 @@ Use one compatible package identity/version for both registries: `@wgtechlabs/md
 
 The first npm publication needs a one-time bootstrap if the package is absent. Use the preserved validated `0.1.0` tarball tied to the existing `v0.1.0` tag at finalized commit `3975075b4dee44806012e71d80e858ddcf2b39a9`; follow the verification and maintainer-authentication procedure in [docs/RELEASING.md](docs/RELEASING.md). Never rewrite the tag, duplicate an existing registry version, or blindly rerun a partial publication. Future eligible releases use automatic OIDC after the trusted publisher and workflow adoption are verified.
 
-Required sequencing: validate source → finalize release source/version → build package → confirm successful publication to BOTH registries → publish GitHub Release. Partial registry publication is incomplete and must not unlock release. Do not silently change existing primitive defaults; document consumer policy overrides such as non-main artifact publishing.
+Required sequencing on `main`: validate source → finalize release source/version → build package → confirm successful publication to BOTH registries → publish GitHub Release. Development builds validate and publish from the triggering commit without release finalization or a GitHub Release. Partial registry publication is incomplete and must not unlock release. Do not silently change existing primitive defaults; document consumer policy overrides such as non-main artifact publishing.
 
 ### Release gate contract
 

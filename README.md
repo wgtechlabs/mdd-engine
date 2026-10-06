@@ -4,7 +4,7 @@ The headless Markdown documentation compiler behind mdd. Give it a local project
 
 Built with TypeScript and Bun. Runs on Node.js 22, 24, and 26 without Bun. The default is the latest Node LTS, currently pinned to **24.21.0**.
 
-> Initial implementation. Publishing to npm and GitHub Packages is configured for eligible pushes to `main`. Verify the first release before using registry installation instructions. See [releasing](docs/RELEASING.md).
+> Build Flow is configured to publish development packages from `dev` with the `dev` dist-tag and regular releases from `main` to npm and GitHub Packages. See [releasing](docs/RELEASING.md).
 
 ## A documentation project
 
@@ -38,7 +38,9 @@ All settings are optional. Custom paths are relative to `mdd/config.json` and mu
 
 ## Compile without a website
 
-After installing a locally packed copy of `@wgtechlabs/mdd-engine` in your Node project:
+Install the regular package with `bun add @wgtechlabs/mdd-engine`. Once the first development build is published, use `bun add @wgtechlabs/mdd-engine@dev` to try the development version. You can also install a locally packed copy.
+
+In your Node project:
 
 ```js
 import { compileProject } from '@wgtechlabs/mdd-engine';

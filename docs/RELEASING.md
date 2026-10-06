@@ -1,20 +1,30 @@
 # Releasing mdd-engine
 
-## Automatic publication on main
+## Automatic publication channels
 
-[Build Flow](../.github/workflows/build-flow.yml) enables package publication and GitHub Release creation for eligible pushes to `main`. It publishes `@wgtechlabs/mdd-engine` to both npm (`registry.npmjs.org`) and GitHub Packages (`npm.pkg.github.com`). This package does not publish a container image to GHCR.
+[Build Flow](../.github/workflows/build-flow.yml) enables development package publication from `dev` and regular package publication with a GitHub Release from `main`. It publishes `@wgtechlabs/mdd-engine` to both npm (`registry.npmjs.org`) and GitHub Packages (`npm.pkg.github.com`). This package does not publish a container image to GHCR.
 
 The workflow pins released [Build Flow v1.0.0](https://github.com/wgtechlabs/build-flow-action/releases/tag/v1.0.0) at immutable commit [`f8263c388160a62f4a0e72ed888e56c8e9159469`](https://github.com/wgtechlabs/build-flow-action/commit/f8263c388160a62f4a0e72ed888e56c8e9159469). It uses the released [Package Build Flow v2.3.0](https://github.com/wgtechlabs/package-build-flow-action/releases/tag/v2.3.0). Workflow validation does not prove npm trust configuration or publication.
 
-PRs, pushes to `dev`, and manual runs validate changes without publishing artifacts. Promoting this configuration to `main` enables the release path. Use a regular merge commit for the `dev` → `main` promotion and obtain explicit merge/release authorization.
+Development builds are standard: the caller omits `publish-dev-artifacts` to inherit Build Flow's `true` default. PR and manual publication are explicitly disabled. The caller also requires a `push` event for `package-publish-enabled`, because the pinned orchestrator classifies manual runs on `dev` as development events too.
+
+| Trigger | Package version / dist-tag | GitHub Release |
+|---|---|---|
+| Eligible push to `dev` | `<base-version>-dev.<short-sha>` / `dev` | None |
+| Eligible push to `main` | Planned regular version / `latest` | After both registries succeed |
+| Pull request or manual run | Validation only | None |
+
+For example, base version `0.1.0` produces `0.1.0-dev.<seven-character-sha>`. After the first successful development publication, install it with `bun add @wgtechlabs/mdd-engine@dev`. Development publication does not move `latest`. Commit-type filtering is disabled by default, so setup or documentation changes are eligible too; the existing bot-actor detection can still suppress publication.
+
+Merging into `dev` can publish a development package. Use a regular merge commit for the `dev` → `main` promotion, which can publish a regular release. Both operations must stay within the authorized merge/release scope.
 
 ## Required sequence
 
 1. CI runs the Bun checks and packed-package smoke check on Node 22, 24, and 26. Dependency auditing and Gitleaks must pass.
 2. Enabled CodeQL analysis must succeed before source finalization or publication.
-3. Build Flow finalizes the planned version, source commit, changelog, and tag once.
-4. The package job checks out that exact finalized commit, builds the package, and publishes to both registries.
-5. Both registry results must report success and the complete package job must succeed before Build Flow creates the GitHub Release.
+3. On `main`, Build Flow finalizes the planned version, source commit, changelog, and tag once. Development builds skip release finalization and use the triggering commit.
+4. The package job checks out that source commit, builds the package with the appropriate version/dist-tag, and publishes to both registries.
+5. For `main`, both registry results must report success and the complete package job must succeed before Build Flow creates the GitHub Release. Development builds do not create a GitHub Release.
 
 The package primitive's `artifact-published` output means at least one registry published. Build Flow checks complete publication separately; the aggregate flag alone is insufficient. Failure of either registry, a later package step, or required security analysis must prevent the GitHub Release. Preserve these guarantees when upgrading the workflow pin.
 
@@ -45,7 +55,7 @@ Trust the calling workflow in this repository, even though reusable Build Flow w
 
 After setup, eligible future releases publish automatically without an npm publish token or a per-version promotion step. Saving the trusted publisher does not verify it; confirm a successful OIDC publication before considering migration complete.
 
-Create the trusted-publisher configuration shortly before an authorized promotion to `main`: it must complete its first successful publish within **48 hours of creation**. That successful publish validates the configuration and removes its expiry. If it expires before publication, recreate it to start a new 48-hour window; ordinary edits do not reset the deadline. Changing the repository or project identity requires a new trust relationship and validation window. See [npm's validation-window announcement](https://github.blog/changelog/2026-10-02-unvalidated-npm-trusted-publishing-configurations-now-expire/). The deadline does not replace the bootstrap, merge-authorization, or release-verification requirements below.
+The same trusted publisher supports both `dev` and `main` through `build-flow.yml`. Create the configuration shortly before an authorized publication: it must complete its first successful publish within **48 hours of creation**. That successful publish validates the configuration and removes its expiry. If it expires before publication, recreate it to start a new 48-hour window; ordinary edits do not reset the deadline. Changing the repository or project identity requires a new trust relationship and validation window. See [npm's validation-window announcement](https://github.blog/changelog/2026-10-02-unvalidated-npm-trusted-publishing-configurations-now-expire/). The deadline does not replace the bootstrap, merge-authorization, or release-verification requirements below.
 
 ## Bootstrap the first npm version
 
@@ -57,7 +67,7 @@ Verify the npm result, configure the trusted publisher, and complete the missing
 
 ## Verify a release
 
-After the main workflow completes, verify the actual version in both registries, package contents and integrity, GitHub package visibility, and the GitHub Release tag/commit. GitHub Packages may initially be private; confirm the intended public visibility. Successful validation or an accepted workflow run does not prove publication.
+After a `dev` or `main` workflow completes, verify the actual version and dist-tag in both registries, package contents and integrity, and GitHub package visibility. For a regular release from `main`, also verify the GitHub Release tag/commit. Development builds must update `dev` without moving `latest`. GitHub Packages may initially be private; confirm the intended public visibility. Successful validation or an accepted workflow run does not prove publication.
 
 The packed package must contain runtime JavaScript, TypeScript declarations, README, and LICENSE, while excluding tests, credentials, caches, and development files. Before the first release or a compatibility change, verify current Node 22/24/26 and the lowest version claimed by `engines.node`.
 
@@ -65,13 +75,13 @@ The packed package must contain runtime JavaScript, TypeScript declarations, REA
 
 Registry publication is not atomic. If one registry succeeds and the other fails, the GitHub Release must remain unpublished. Do not delete the published version or blindly rerun the whole workflow: the primitive attempts both registries again and does not treat an existing version as a successful retry.
 
-1. Record the finalized tag/commit, exact package version, successful registry, and failed job logs. Correct the failed registry's access issue: npm trusted-publisher identity/OIDC permissions (recreate an expired configuration) or GitHub package permissions, as applicable.
-2. Retrieve the published tarball from the successful registry and verify its identity, version, metadata, integrity, and contents against the finalized source. Preserve those package bytes for recovery.
-3. With explicit publication authorization, publish that verified tarball only to the missing registry using authentication accepted by that registry. Do not rebuild a different artifact, change the released version, or rewrite the finalized tag.
-4. Verify the same version and package contents in both registries and all required checks on the finalized source. Only then create the GitHub Release for the existing verified tag with explicit release authorization.
+1. Record the source commit, finalized tag if applicable, exact package version/dist-tag, successful registry, and failed job logs. Correct the failed registry's access issue: npm trusted-publisher identity/OIDC permissions (recreate an expired configuration) or GitHub package permissions, as applicable.
+2. Retrieve the published tarball from the successful registry and verify its identity, version, metadata, integrity, and contents against that source. Preserve those package bytes for recovery.
+3. With explicit publication authorization, publish that verified tarball only to the missing registry using authentication accepted by that registry and the recorded dist-tag. For development recovery, explicitly use `--tag dev` so the upload cannot move `latest`. Do not rebuild a different artifact, change the released version, or rewrite the finalized tag.
+4. Verify the same version, dist-tag, and package contents in both registries and all required checks on that source. For a regular release from `main`, only then create the GitHub Release for the existing verified tag with explicit release authorization. Development package recovery does not create a GitHub Release.
 
 This is a manual recovery procedure, not automatic retry support. No live partial-publication recovery has been exercised for mdd-engine.
 
 ## Normal delivery
 
-Work on a short-lived branch from `dev`, squash its PR into `dev`, and promote `dev` to `main` through a regular merge commit with a meaningful `🚀 release:` title. See [AGENTS.md](../AGENTS.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).
+Work on a short-lived branch from `dev` and squash its PR into `dev` to enable an eligible development package build. Promote `dev` to `main` through a regular merge commit with a meaningful `🚀 release:` title for a regular release. See [AGENTS.md](../AGENTS.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).

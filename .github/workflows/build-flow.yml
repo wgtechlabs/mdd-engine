@@ -41,12 +41,12 @@ jobs:
       package-manager: bun
       release-package-manager: bun
 
-      # Only an eligible main push may publish packages and a GitHub Release.
-      publish-dev-artifacts: false
+      # Use Build Flow's default dev publishing; PR/manual runs validate only.
       publish-pr-artifacts: false
       publish-manual-artifacts: false
 
       # The pinned workflow gates publication on CI/security and requires both
       # registries plus successful package-job completion before GitHub Release.
-      package-publish-enabled: true
+      # The pinned policy also treats manual runs on dev as dev events.
+      package-publish-enabled: ${{ github.event_name == 'push' }}
       release-create: true
