@@ -200,6 +200,10 @@ export function parseDocument(
         "Raw HTML is not supported; use Markdown or an mdd component.",
         node,
       );
+      if (parent && index !== undefined) {
+        parent.children.splice(index, 1);
+        return [SKIP, index];
+      }
     }
     if (
       (node.type === "link" ||
@@ -301,19 +305,8 @@ export async function renderDocument(
   document: ParsedDocument,
 ): Promise<{ html: string; markdown: string }> {
   const htmlTree = await htmlRenderer.run(document.tree);
-  const markdownTree = structuredClone(document.tree);
-  visit(markdownTree, (node, index, parent) => {
-    if (
-      (node.type === "html" || node.type === "yaml") &&
-      parent &&
-      index !== undefined
-    ) {
-      parent.children.splice(index, 1);
-      return [SKIP, index];
-    }
-  });
   return {
     html: String(htmlRenderer.stringify(htmlTree)),
-    markdown: String(markdownRenderer.stringify(markdownTree)),
+    markdown: String(markdownRenderer.stringify(document.tree)),
   };
 }

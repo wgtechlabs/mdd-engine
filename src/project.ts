@@ -4,9 +4,7 @@ import type { CompileOptions, Diagnostic, Theme } from "./types.js";
 
 export interface Project {
   root: string;
-  mddRoot: string;
   contentsRoot: string;
-  themesRoot: string;
   title?: string;
   theme: Theme;
   files: string[];
@@ -380,7 +378,7 @@ export async function loadProject(
     }
     if (diagnostics.some((diagnostic) => diagnostic.severity === "error"))
       return undefined;
-    return { root, mddRoot, contentsRoot, themesRoot, title, theme, files };
+    return { root, contentsRoot, title, theme, files };
   } catch (error) {
     if (!(error instanceof AuthoringError)) throw error;
     diagnostics.push({

@@ -59,6 +59,7 @@ try {
     path.join(temp, "consumer.mjs"),
     `
 import assert from 'node:assert/strict';
+import { rm, writeFile } from 'node:fs/promises';
 import { compileProject } from '@wgtechlabs/mdd-engine';
 assert.equal(typeof globalThis.Bun, 'undefined');
 for (const basePath of ['/', '/docs/', '/repository/docs/']) {
@@ -69,6 +70,16 @@ for (const basePath of ['/', '/docs/', '/repository/docs/']) {
   assert(result.site.pages.find(p => p.route === '/').html.includes(basePath + 'guide/install/#mdd-install'));
   assert.deepEqual(await compileProject({projectDir: process.cwd(), basePath}), result);
 }
+// Exercise rendering overflow and parsing overflow in each real Node runtime.
+for (const depth of [2_000, 10_000]) {
+  await writeFile('mdd/contents/deep.md', '> '.repeat(depth) + 'Nested text');
+  const result = await compileProject({projectDir: process.cwd()});
+  assert.equal(result.site, undefined);
+  assert.deepEqual(result.diagnostics.map(({code, file}) => ({code, file})), [
+    {code: 'CONTENT_TOO_DEEP', file: 'mdd/contents/deep.md'},
+  ]);
+}
+await rm('mdd/contents/deep.md');
 console.log('Packed consumer passed on Node ' + process.version);
 `,
   );
