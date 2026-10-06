@@ -2,7 +2,7 @@
 
 ## Automatic publication on main
 
-[Build Flow](../.github/workflows/build.yml) enables package publication and GitHub Release creation for eligible pushes to `main`. It publishes `@wgtechlabs/mdd-engine` to both npm (`registry.npmjs.org`) and GitHub Packages (`npm.pkg.github.com`). This package does not publish a container image to GHCR.
+[Build Flow](../.github/workflows/build-flow.yml) enables package publication and GitHub Release creation for eligible pushes to `main`. It publishes `@wgtechlabs/mdd-engine` to both npm (`registry.npmjs.org`) and GitHub Packages (`npm.pkg.github.com`). This package does not publish a container image to GHCR.
 
 The workflow pins released [Build Flow v1.0.0](https://github.com/wgtechlabs/build-flow-action/releases/tag/v1.0.0) at immutable commit [`f8263c388160a62f4a0e72ed888e56c8e9159469`](https://github.com/wgtechlabs/build-flow-action/commit/f8263c388160a62f4a0e72ed888e56c8e9159469). It uses the released [Package Build Flow v2.3.0](https://github.com/wgtechlabs/package-build-flow-action/releases/tag/v2.3.0). Workflow validation does not prove npm trust configuration or publication.
 
@@ -37,7 +37,7 @@ Once the package exists on npm, add a GitHub Actions trusted publisher in its np
 |---|---|
 | Organization or user | `wgtechlabs` |
 | Repository | `mdd-engine` |
-| Workflow filename | `build.yml` |
+| Workflow filename | `build-flow.yml` |
 | Environment | Leave empty unless the publishing job declares one |
 | Allowed actions | Enable **npm publish** for direct automatic publication |
 
