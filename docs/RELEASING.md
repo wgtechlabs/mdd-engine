@@ -45,6 +45,8 @@ Trust the calling workflow in this repository, even though reusable Build Flow w
 
 After setup, eligible future releases publish automatically without an npm publish token or a per-version promotion step. Saving the trusted publisher does not verify it; confirm a successful OIDC publication before considering migration complete.
 
+Create the trusted-publisher configuration shortly before an authorized promotion to `main`: it must complete its first successful publish within **48 hours of creation**. That successful publish validates the configuration and removes its expiry. If it expires before publication, recreate it to start a new 48-hour window; ordinary edits do not reset the deadline. Changing the repository or project identity requires a new trust relationship and validation window. See [npm's validation-window announcement](https://github.blog/changelog/2026-10-02-unvalidated-npm-trusted-publishing-configurations-now-expire/). The deadline does not replace the bootstrap, merge-authorization, or release-verification requirements below.
+
 ## Bootstrap the first npm version
 
 If npm still returns 404 for `@wgtechlabs/mdd-engine`, bootstrap the package once before configuring its trusted publisher. Use the preserved, validated `0.1.0` tarball associated with `v0.1.0` and finalized main commit [`3975075b4dee44806012e71d80e858ddcf2b39a9`](https://github.com/wgtechlabs/mdd-engine/commit/3975075b4dee44806012e71d80e858ddcf2b39a9).
@@ -63,7 +65,7 @@ The packed package must contain runtime JavaScript, TypeScript declarations, REA
 
 Registry publication is not atomic. If one registry succeeds and the other fails, the GitHub Release must remain unpublished. Do not delete the published version or blindly rerun the whole workflow: the primitive attempts both registries again and does not treat an existing version as a successful retry.
 
-1. Record the finalized tag/commit, exact package version, successful registry, and failed job logs. Correct the failed registry's access issue: npm trusted-publisher identity/OIDC permissions or GitHub package permissions, as applicable.
+1. Record the finalized tag/commit, exact package version, successful registry, and failed job logs. Correct the failed registry's access issue: npm trusted-publisher identity/OIDC permissions (recreate an expired configuration) or GitHub package permissions, as applicable.
 2. Retrieve the published tarball from the successful registry and verify its identity, version, metadata, integrity, and contents against the finalized source. Preserve those package bytes for recovery.
 3. With explicit publication authorization, publish that verified tarball only to the missing registry using authentication accepted by that registry. Do not rebuild a different artifact, change the released version, or rewrite the finalized tag.
 4. Verify the same version and package contents in both registries and all required checks on the finalized source. Only then create the GitHub Release for the existing verified tag with explicit release authorization.
