@@ -59,6 +59,8 @@ if (!result.site) {
 
 `site` is absent whenever authoring errors exist. Diagnostics contain a stable code, severity, message, and source location where available. Unexpected filesystem failures reject the promise with context. Identical inputs produce identical output.
 
+Excessive Markdown nesting that exceeds the runtime's call stack produces a `CONTENT_TOO_DEEP` diagnostic identifying the source file.
+
 The result includes:
 
 - `pages`: source, route, public URL, title, description, article HTML, readable Markdown, headings, and navigation metadata.

@@ -23,6 +23,53 @@ async function fixture(files: Record<string, string>): Promise<string> {
 }
 
 describe("compileProject", () => {
+  test("reuses shared assets without losing link suffixes or retaining stale files", async () => {
+    const projectDir = await fixture({
+      "contents/index.md": "# Home\n\n![Logo](logo.png?size=1#preview)",
+      "contents/guide/index.md":
+        "# Guide\n\n![Logo](../logo.png?size=2)\n\n[Download](/logo.png#download)",
+      "contents/logo.png": "image",
+    });
+    const { site, diagnostics } = await compileProject({
+      projectDir,
+      basePath: "/docs/",
+    });
+    expect(diagnostics).toEqual([]);
+    expect(site?.assets).toEqual([
+      {
+        source: "mdd/contents/logo.png",
+        destination: "_assets/logo.png",
+        url: "/docs/_assets/logo.png",
+      },
+    ]);
+    const html = site?.pages.map((page) => page.html).join("\n");
+    expect(html).toContain('src="/docs/_assets/logo.png?size=1#preview"');
+    expect(html).toContain('src="/docs/_assets/logo.png?size=2"');
+    expect(html).toContain('href="/docs/_assets/logo.png#download"');
+
+    await rm(path.join(projectDir, "mdd/contents/logo.png"));
+    const next = await compileProject({ projectDir });
+    expect(next.site).toBeUndefined();
+    expect(next.diagnostics.map(({ code }) => code)).toEqual([
+      "MISSING_ASSET",
+      "MISSING_ASSET",
+      "MISSING_ASSET",
+    ]);
+  });
+
+  test("still rejects an image of an asset previously used as a download", async () => {
+    const projectDir = await fixture({
+      "contents/index.md":
+        "# Home\n\n[Download](manual.pdf)\n\n![Preview](manual.pdf)",
+      "contents/manual.pdf": "document",
+    });
+    const result = await compileProject({ projectDir });
+    expect(result.site).toBeUndefined();
+    expect(result.diagnostics).toMatchObject([
+      { code: "INVALID_IMAGE", file: "mdd/contents/index.md", line: 5 },
+    ]);
+  });
+
   test("ignores unused local reference definitions and their assets", async () => {
     const projectDir = await fixture({
       "contents/index.md":
