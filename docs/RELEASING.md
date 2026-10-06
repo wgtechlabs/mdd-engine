@@ -4,7 +4,7 @@
 
 [Build Flow](../.github/workflows/build.yml) enables package publication and GitHub Release creation for eligible pushes to `main`. It publishes `@wgtechlabs/mdd-engine` to both npm (`registry.npmjs.org`) and GitHub Packages (`npm.pkg.github.com`). This package does not publish a container image to GHCR.
 
-This migration currently pins the reviewed [Build Flow OIDC integration commit](https://github.com/wgtechlabs/build-flow-action/commit/167779d858c63426c534bce28e2d10aba1787e58) for validation. It uses the released [Package Build Flow v2.3.0](https://github.com/wgtechlabs/package-build-flow-action/releases/tag/v2.3.0). **Replace the integration pin with its released Build Flow commit before merging this migration.** Workflow validation does not prove npm trust configuration or publication.
+The workflow pins released [Build Flow v1.0.0](https://github.com/wgtechlabs/build-flow-action/releases/tag/v1.0.0) at immutable commit [`f8263c388160a62f4a0e72ed888e56c8e9159469`](https://github.com/wgtechlabs/build-flow-action/commit/f8263c388160a62f4a0e72ed888e56c8e9159469). It uses the released [Package Build Flow v2.3.0](https://github.com/wgtechlabs/package-build-flow-action/releases/tag/v2.3.0). Workflow validation does not prove npm trust configuration or publication.
 
 PRs, pushes to `dev`, and manual runs validate changes without publishing artifacts. Promoting this configuration to `main` enables the release path. Use a regular merge commit for the `dev` → `main` promotion and obtain explicit merge/release authorization.
 
@@ -41,7 +41,7 @@ Once the package exists on npm, add a GitHub Actions trusted publisher in its np
 | Environment | Leave empty unless the publishing job declares one |
 | Allowed actions | Enable **npm publish** for direct automatic publication |
 
-Trust the calling workflow in this repository, even though reusable Build Flow workflows perform the upload. Grant `id-token: write` through the caller and called workflows, use GitHub-hosted runners, and retain `package-npm-auth-method: oidc` when adopting the released Build Flow integration. Keep both registries enabled. See [npm's trusted-publishing guide](https://docs.npmjs.com/trusted-publishers/) for the platform requirements and settings.
+Trust the calling workflow in this repository, even though reusable Build Flow workflows perform the upload. Grant `id-token: write` through the caller and called workflows, use GitHub-hosted runners, and retain `package-npm-auth-method: oidc` when upgrading Build Flow. Keep both registries enabled. See [npm's trusted-publishing guide](https://docs.npmjs.com/trusted-publishers/) for the platform requirements and settings.
 
 After setup, eligible future releases publish automatically without an npm publish token or a per-version promotion step. Saving the trusted publisher does not verify it; confirm a successful OIDC publication before considering migration complete.
 
