@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.1.1] - 2026-10-06
+
+### Changed
+
+- restore default package build channels (#13)
+- streamline compilation and report excessive nesting
+- rename workflow to build-flow.yml (#9)
+- explain trusted publisher validation window
+- adopt npm trusted publishing (#7)
+
 ## [0.1.0] - 2026-10-03
 
 ### Added
