@@ -67,15 +67,15 @@ describe("shared footer", () => {
     expect(result.site?.navigation).toHaveLength(2);
     expect(result.site?.assets).toEqual([]);
     expect(
-      result.site?.pages.every(
-        (page) =>
-          !page.html.includes("github.com") &&
-          !page.markdown.includes("github.com"),
-      ),
-    ).toBe(true);
-    expect(
       await compileProject({ projectDir: root, basePath: "/repository/docs/" }),
     ).toEqual(result);
+    await rm(path.join(root, "mdd/footer.md"));
+    const withoutFooter = await compileProject({
+      projectDir: root,
+      basePath: "/repository/docs/",
+    });
+    expect(withoutFooter.diagnostics).toEqual([]);
+    expect(result.site?.pages).toEqual(withoutFooter.site?.pages);
   });
 
   test("omits absent and whitespace-only shared footers", async () => {
