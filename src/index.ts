@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { parseFooter } from "./footer.js";
 import { resolveLinks, type SourcePage } from "./links.js";
 import {
   type ParsedDocument,
@@ -16,19 +17,33 @@ import type {
   CompileOptions,
   CompileResult,
   Diagnostic,
+  Footer,
   Page,
 } from "./types.js";
+
+export {
+  type SearchIndex,
+  type SearchOptions,
+  type SearchPage,
+  type SearchResult,
+  type SearchSection,
+  search,
+  validateSearchIndex,
+} from "./search.js";
+export { createSearchIndex } from "./search-index.js";
 
 export type {
   Asset,
   CompileOptions,
   CompileResult,
   Diagnostic,
+  Footer,
   Heading,
   Metadata,
   NavigationItem,
   Page,
   Site,
+  SocialLink,
   Theme,
 } from "./types.js";
 
@@ -80,6 +95,17 @@ export async function compileProject(
   }
   const project = await loadProject(options, diagnostics);
   if (!project) return { diagnostics };
+  let footer: Footer | undefined;
+  if (project.footer) {
+    const source = relativeSource(project.root, project.footer);
+    const text = await readFile(project.footer, "utf8");
+    try {
+      footer = parseFooter(text, source, diagnostics);
+    } catch (error) {
+      diagnostics.push(nestingDiagnostic(error, source));
+      return { diagnostics };
+    }
+  }
   const sources: SourcePage[] = [];
   const routes = new Map<string, string>();
   for (const file of project.files) {
@@ -161,6 +187,7 @@ export async function compileProject(
       ),
       assets,
       theme: project.theme,
+      ...(footer ? { footer } : {}),
     },
     diagnostics,
   };

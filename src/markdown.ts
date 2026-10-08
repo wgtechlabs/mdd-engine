@@ -65,6 +65,11 @@ const htmlRenderer = unified()
 const markdownRenderer = unified().use(remarkGfm).use(remarkStringify);
 const componentNames = new Set(["note", "tip", "warning", "details"]);
 
+/** Shared syntax parser; callers validate the allowed document context. */
+export function parseMarkdown(source: string): Root {
+  return parser.parse(source);
+}
+
 /** Keep the same first-wins, reachable definitions that the HTML renderer uses. */
 function retainReferencedDefinitions(tree: Root): void {
   const definitions = new Map<string, Definition>();
@@ -126,7 +131,7 @@ export function parseDocument(
   file: string,
   diagnostics: Diagnostic[],
 ): ParsedDocument {
-  const tree = parser.parse(source);
+  const tree = parseMarkdown(source);
   retainReferencedDefinitions(tree);
   const metadata: Metadata = {};
   const headings: Heading[] = [];
