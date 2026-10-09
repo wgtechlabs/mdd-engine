@@ -187,6 +187,63 @@ test("merges overlapping highlights and preserves literal untrusted text", () =>
   expect(hit?.matches.excerpt).toEqual([[8, 16]]);
 });
 
+test("scores preserve the exact-label, literal, and corrected result order", () => {
+  const pages = [
+    {
+      url: "/partial/",
+      title: "one two three four extra",
+      description: "",
+      sections: [],
+    },
+    {
+      url: "/heading/",
+      title: "Guide",
+      description: "",
+      sections: [
+        { title: "one two three four", text: "", url: "/heading/#mdd-heading" },
+      ],
+    },
+  ];
+  const hits = search({ version: 1, pages }, "one two three four", {
+    mode: "sections",
+  });
+  expect(hits.map((hit) => hit.url)).toEqual([
+    "/heading/#mdd-heading",
+    "/partial/",
+  ]);
+  expect(hits[0]?.score ?? 0).toBeGreaterThan(hits[1]?.score ?? 0);
+  const mixed: SearchIndex = {
+    version: 1,
+    pages: [
+      { url: "/typo/", title: "Bridge", description: "", sections: [] },
+      {
+        url: "/literal/",
+        title: "Notes",
+        description: "",
+        sections: [{ title: "Body", text: "brige", url: "/literal/#mdd-body" }],
+      },
+    ],
+  };
+  const corrected = search(mixed, "brige", { mode: "sections", fuzzy: true });
+  expect(corrected.map((hit) => hit.url)).toEqual([
+    "/literal/#mdd-body",
+    "/typo/",
+  ]);
+  expect(corrected[0]?.score ?? 0).toBeGreaterThan(corrected[1]?.score ?? 0);
+});
+
+test("whole-token correction ignores embedded words and astral letter boundaries", () => {
+  const hit = search(
+    textIndex(`${"aabridge ".repeat(2_000)}𐐀bridge bridge𐐀 bridge`),
+    "brige",
+    { mode: "sections", fuzzy: true },
+  )[0];
+  expect(hit?.excerpt.endsWith("𐐀bridge bridge𐐀 bridge")).toBe(true);
+  expect(
+    hit?.matches.excerpt.map(([start, end]) => hit.excerpt.slice(start, end)),
+  ).toEqual(["bridge"]);
+});
+
 test("retains a coherent section correction when the page title suggests another spelling", () => {
   const hits = search(textIndex("Execute the bridge.", "Bride"), "brige", {
     mode: "sections",
@@ -207,7 +264,7 @@ test("accepts old version-one indexes but validates new breadcrumb metadata and 
   expect(search(index, "needle", { mode: "sections" })[0]?.breadcrumbs).toEqual(
     ["Guide"],
   );
-  for (const breadcrumbs of [null, "bad", [1], [null]]) {
+  for (const breadcrumbs of [null, "bad", [1], [null], new Array<string>(2)]) {
     const invalid = structuredClone(index);
     Object.assign(invalid.pages[0] ?? {}, { breadcrumbs });
     expect(() => validateSearchIndex(invalid)).toThrow(TypeError);

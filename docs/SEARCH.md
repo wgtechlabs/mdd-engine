@@ -77,7 +77,8 @@ transposition from an indexed word. Only query terms of 4–32 Unicode code poin
 are eligible. Exact/partial literal results precede typo-corrected results;
 correction does not invent destinations or relax the all-terms requirement.
 Exact page/heading labels rank ahead of other literal hits; within each tier,
-field weights and deterministic destination-URL ordering apply. The fuzzy pass
+field weights and deterministic destination-URL ordering apply. The returned
+`score` includes the tier weight, so descending scores preserve this order. The fuzzy pass
 only runs when literal results do not fill the requested limit. These bounds
 favor predictable documentation lookup over broad approximate matching. Partial substring matching continues to work without enabling fuzzy
 matching.

@@ -48,11 +48,12 @@ breadcrumbs, bounded single-term typo correction, and UTF-16 ranges for original
 text highlighting. Default page search retains its existing matching/ranking.
 The new regression suite failed before implementation and now passes.
 
-Local validation: `bun run check` passed lint, types, 221 tests / 1014 assertions,
+Local validation: `bun run check` passed lint, types, 223 tests / 1022 assertions,
 build, and packed Node 22.16.0 consumer checks. The same archive additionally
 passed under Node 22.0.0, 24.21.0, and 26.10.0. Tests cover distinct and duplicate
 heading destinations, all public prefixes, coherent multiword results, typo
 bounds/ranking, Unicode graphemes, text-only output, validation, JSON round trips,
+score-order consistency, sparse metadata rejection, whole-word boundary handling,
 and legacy behavior. `bun audit` reported no known vulnerabilities.
 
 A local timing probe over 500 pages / 1,500 sections with 989-character bodies

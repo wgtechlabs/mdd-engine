@@ -57,12 +57,11 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function breadcrumbs(value: unknown, maximum: number): boolean {
-  return (
-    value === undefined ||
-    (Array.isArray(value) &&
-      value.length <= maximum &&
-      value.every((label) => typeof label === "string"))
-  );
+  if (value === undefined) return true;
+  if (!Array.isArray(value) || value.length > maximum) return false;
+  // Iterate holes too: a sparse array does not contain only string labels.
+  for (const label of value) if (typeof label !== "string") return false;
+  return true;
 }
 
 function pageUrl(value: unknown): value is string {
@@ -188,10 +187,15 @@ function matchRanges(
       const start = normalized.indexOf(pattern.text, offset);
       if (start < 0) break;
       const end = start + pattern.text.length;
-      // Unicode-aware boundaries avoid splitting an astral letter at a token edge.
-      const before = normalized.slice(0, start).match(/[\p{L}\p{N}\p{M}_]$/u);
-      const after = /^[\p{L}\p{N}\p{M}_]/u.test(normalized.slice(end));
-      if (!pattern.whole || (!before && !after)) {
+      // One neighboring code point needs at most two UTF-16 units. Avoid scanning
+      // a growing prefix for each occurrence, or any boundary work for substrings.
+      if (
+        !pattern.whole ||
+        (!/[\p{L}\p{N}\p{M}_]$/u.test(
+          normalized.slice(Math.max(0, start - 2), start),
+        ) &&
+          !/^[\p{L}\p{N}\p{M}_]/u.test(normalized.slice(end, end + 2)))
+      ) {
         found.push([start, end]);
         if (firstOnly) break;
       }
@@ -553,6 +557,9 @@ function sectionCandidates(
   return results;
 }
 
+// Greater than the largest raw score: 32 terms × weight 8 + title bonus 24.
+const sectionTierWeight = 281;
+
 function displayResult(candidate: Candidate): SearchResult {
   const { page, destination, patterns } = candidate;
   const isSection = destination !== undefined && destination.url !== page.url;
@@ -572,7 +579,7 @@ function displayResult(candidate: Candidate): SearchResult {
     ...(destination?.title ? { section: destination.title } : {}),
     breadcrumbs: trail,
     excerpt: snippet,
-    score: candidate.score,
+    score: candidate.rank * sectionTierWeight + candidate.score,
     matches: {
       title: matchRanges(page.title, patterns),
       section: matchRanges(destination?.title ?? "", patterns),
