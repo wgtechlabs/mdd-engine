@@ -49,7 +49,13 @@ try {
   await mkdir(path.join(contents, "guide"), { recursive: true });
   await writeFile(
     path.join(contents, "index.md"),
-    "# Home\n\n[Install](guide/install.md#install)\n\n:::note\nA headless package.\n:::\n",
+    "# Home\n\n" +
+      ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"]
+        .map(
+          (type) =>
+            `> [!${type}]\n> A headless package. [Install](guide/install.md#install)\n`,
+        )
+        .join("\n"),
   );
   await writeFile(
     path.join(contents, "guide", "install.md"),
@@ -68,8 +74,23 @@ for (const basePath of ['/', '/docs/', '/repository/docs/']) {
   assert.equal(result.site.pages.length, 2);
   assert.equal(result.site.title, 'Home');
   assert(result.site.pages.find(p => p.route === '/').html.includes(basePath + 'guide/install/#mdd-install'));
+  const home = result.site.pages.find(p => p.route === '/');
+  for (const type of ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']) {
+    assert(home.html.includes('class="mdd-alert mdd-' + type.toLowerCase() + '"'));
+    assert(home.markdown.includes('> [!' + type + ']'));
+  }
+  assert(!home.html.includes('role="alert"'));
   assert.deepEqual(await compileProject({projectDir: process.cwd(), basePath}), result);
 }
+for (const name of ['note', 'tip', 'warning']) {
+  await writeFile('mdd/contents/legacy.md', '# Legacy\\n\\n:::' + name + '[Custom title]\\nBody\\n:::\\n');
+  const legacy = await compileProject({projectDir: process.cwd()});
+  assert.equal(legacy.site, undefined);
+  assert.equal(legacy.diagnostics[0].code, 'REMOVED_COMPONENT');
+  assert.equal(legacy.diagnostics[0].line, 3);
+  assert(legacy.diagnostics[0].message.includes('> [!' + name.toUpperCase() + ']'));
+}
+await rm('mdd/contents/legacy.md');
 // Exercise rendering overflow and parsing overflow in each real Node runtime.
 for (const depth of [2_000, 10_000]) {
   await writeFile('mdd/contents/deep.md', '> '.repeat(depth) + 'Nested text');
