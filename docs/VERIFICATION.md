@@ -40,3 +40,25 @@ Verified October 3, 2026 after the promotion review. Nine additional compilation
 - Publishing and GitHub Release creation are enabled for eligible pushes to `main`, using the corrected upstream security and dual-registry gates. Configuration and simulated failure checks do not prove a live registry publication. See [RELEASING.md](RELEASING.md).
 - GitHub-hosted CI results must be read from the feature pull request. Static workflow validation and local checks do not prove provider execution.
 - No website, Railway deployment, or other mdd repository was implemented in this phase.
+
+## October 10 section search
+
+The opt-in section search API adds coherent page/heading results, display
+breadcrumbs, bounded single-term typo correction, and UTF-16 ranges for original
+text highlighting. Default page search retains its existing matching/ranking.
+The new regression suite failed before implementation and now passes.
+
+Local validation: `bun run check` passed lint, types, 221 tests / 1014 assertions,
+build, and packed Node 22.16.0 consumer checks. The same archive additionally
+passed under Node 22.0.0, 24.21.0, and 26.10.0. Tests cover distinct and duplicate
+heading destinations, all public prefixes, coherent multiword results, typo
+bounds/ranking, Unicode graphemes, text-only output, validation, JSON round trips,
+and legacy behavior. `bun audit` reported no known vulnerabilities.
+
+A local timing probe over 500 pages / 1,500 sections with 989-character bodies
+measured warm median queries of about 14 ms for section lookup and 43 ms for typo
+fallback under Bun 1.3.10. This is a diagnostic sample, not a portable performance
+guarantee. Original-text mapping happens only after limiting the returned hits.
+
+Remote CI, independent PR review, merges, and publication are verified separately
+on the delivery PRs; the local results alone do not establish those outcomes.
