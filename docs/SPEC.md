@@ -51,7 +51,7 @@ compileProject({
 
 Keep parser ASTs and frontend framework types private. Expected authoring failures become diagnostics. Unexpected operational failures must retain useful context and fail the build. Do not silently produce a publishable partial site.
 
-`createSearchIndex(site): SearchIndex` builds versioned JSON data from successfully compiled pages. `search(index, query, { limit? }): SearchResult[]` returns one result per matching page with a validated page/section URL and plain-text excerpt. `validateSearchIndex(unknown)` validates and narrows deserialized data. Import queries/validation/types from `@wgtechlabs/mdd-engine/search` for dependency-free browser use; compilation and index construction belong to the package root. See [SEARCH.md](SEARCH.md) for schema, deterministic ranking, bounds, and text-rendering requirements.
+`createSearchIndex(site): SearchIndex` builds versioned JSON data from successfully compiled pages. `search(index, query, { limit?, mode?, fuzzy? }): SearchResult[]` returns validated page/section URLs, plain-text excerpts, breadcrumbs, and original-text match ranges. The default mode preserves one hit per matching page; opt-in section mode returns multiple matching headings and supports bounded typo correction. `validateSearchIndex(unknown)` validates and narrows deserialized data. Import queries/validation/types from `@wgtechlabs/mdd-engine/search` for dependency-free browser use; compilation and index construction belong to the package root. See [SEARCH.md](SEARCH.md) for schema, deterministic ranking, bounds, and text-rendering requirements.
 
 ## Configuration and directory contract
 

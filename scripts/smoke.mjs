@@ -90,6 +90,14 @@ for (const basePath of ['/', '/docs/', '/repository/docs/']) {
   assert.equal(hits.length, 1);
   assert.equal(hits[0].url, basePath + 'guide/install/#mdd-requirements');
   assert.equal(hits[0].excerpt, 'Use a supported runtime.');
+  const sectionHits = search(index, 'requirments', { mode: 'sections', fuzzy: true });
+  assert.equal(sectionHits[0].kind, 'section');
+  assert.equal(sectionHits[0].url, basePath + 'guide/install/#mdd-requirements');
+  assert.equal(sectionHits[0].pageUrl, basePath + 'guide/install/');
+  assert.deepEqual(sectionHits[0].breadcrumbs, ['Guide', 'Install']);
+  assert.deepEqual(sectionHits[0].matches.section.map(([start, end]) =>
+    sectionHits[0].section.slice(start, end)), ['Requirements']);
+
   const lateMatch = search({ version: 1, pages: [{
     title: 'Guide', url: basePath, description: '', sections: [{
       title: '', url: basePath,
