@@ -94,3 +94,11 @@ This is a manual recovery procedure, not automatic retry support. No live partia
 ## Normal delivery
 
 Work on a short-lived branch from `dev`, use its eligible PR preview for testing, and squash the PR into `dev` for a development package build. Promote `dev` to `main` through a regular merge commit with a meaningful `🚀 release:` title for a regular release. See [AGENTS.md](../AGENTS.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+### Breaking authoring changes
+
+Removing the `:::note`, `:::tip`, and `:::warning` directives is a breaking authoring change. Use a Clean Commit breaking marker, for example `🔧 update!: replace callout directives with github-style alerts`, and preserve that marker in the squash commit into `dev`. Link [the migration guide](ALERTS.md#migrate-removed-callout-directives) in the PR and release notes. A promotion title alone does not replace the breaking marker in the underlying commit.
+
+The pinned Build Flow uses [Release Build Flow v1.8.0's version planner](https://github.com/wgtechlabs/release-build-flow-action/blob/6df9cb42c24c296d902150d051a0b6be4422cccc/scripts/detect-version-bump.sh), which treats `!` as a major bump and resets the minor and patch numbers. It has no special minor-bump exception for `0.x` packages: a major bump from a `0.x` release becomes `1.0.0`. Let the existing workflow calculate and finalize the actual version from its release baseline; do not manually bump `package.json` or change release-policy inputs for this migration.
+
+Before promotion, verify a migrated documentation fixture against the exact preview package and check that legacy callouts report `REMOVED_COMPONENT`. Alert HTML and normalized Markdown must both retain the authored body. Reader and theme adoption are separate consumer changes; an engine release alone does not prove that deployed documentation uses or styles the new syntax.

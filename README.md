@@ -115,16 +115,19 @@ order: 1
 ---
 # Installation
 
-:::note[Before you start]
-You need a local documentation project.
-:::
+> [!NOTE]
+> **Before you start**
+>
+> You need a local documentation project.
 
 :::details[More information]
 Ordinary **Markdown** works inside components.
 :::
 ```
 
-Use `note`, `tip`, `warning`, or `details` containers. Labels are optional; attributes and unknown component names are errors. Callouts become semantic `aside` elements, disclosures become `details`/`summary`, and each has a stable `mdd-<component>` class. Readable Markdown uses blockquotes with bold labels, without executable content.
+Use GitHub-style alerts with `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, or `CAUTION`. Put the exact uppercase marker on the opening line of a blockquote at the document root; nested blockquotes remain ordinary quotes. Alerts become semantic `aside` elements with `mdd-alert` and `mdd-<type>` classes. Their readable Markdown preserves the `> [!TYPE]` marker. The engine supplies meaning and labels; the reader composes the article, and themes supply icons and colors.
+
+`:::details[More information]` remains supported and becomes `details`/`summary`; its label is optional, attributes are errors, and its readable Markdown uses a blockquote with a bold label. The old `:::note`, `:::tip`, and `:::warning` directives now fail with a `REMOVED_COMPONENT` migration diagnostic. See [alerts and migration](docs/ALERTS.md) for all five types, theme hooks, and how to preserve custom titles and bodies.
 
 Title precedence is frontmatter title, first H1, then readable filename. Navigation uses `navTitle` when supplied. Explicit `order` sorts first; remaining siblings sort deterministically by label and path.
 

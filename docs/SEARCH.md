@@ -34,6 +34,8 @@ The index is JSON data with `version: 1` and a URL-sorted `pages` array. Each pa
 
 Only `site.pages` enters the index. The builder reads normalized page Markdown rather than HTML or source files. It preserves readable paragraphs, lists, tables, code, image alternative text, and component labels/bodies, with whitespace collapsed. Formatting markers, link destinations that are not visible text, source paths, navigation labels, global footer content, theme files, and unreferenced files are excluded. An autolink's URL remains searchable because it is visible text.
 
+Recognized GitHub alerts contribute their readable label (for example, `Warning`) and body. Escaped markers, code examples, and nested blockquotes retain their literal text rather than becoming alert labels.
+
 Section URLs reuse the compiled page URL and the exact compiled heading ID, encoded as a fragment. The builder verifies that the normalized Markdown headings match the compiled heading metadata; disagreement throws rather than inventing anchors. Duplicate headings keep their compiler-assigned suffixes. `/`, `/docs/`, nested deployment prefixes, and encoded path segments are preserved. Rebuilding the same compiled pages produces the same index, including when their array order changes. No input is mutated.
 
 ## Matching and ranking

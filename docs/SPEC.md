@@ -110,19 +110,22 @@ Resolve relative `.md` links and local image references against their source fil
 
 ## Markdown components and headless output
 
-Use an established Markdown parser with a documented GFM subset (tables, task lists, strikethrough) and directive support. First component set: `note`, `tip`, `warning`, and `details`.
+Use an established Markdown parser with a documented GFM subset (tables, task lists, strikethrough), GitHub-style alerts, and a `details` directive.
 
 ```markdown
-:::note
-An ordinary Markdown paragraph inside a callout.
-:::
+> [!NOTE]
+> An ordinary Markdown paragraph inside an alert.
 
 :::details[More information]
 Additional Markdown content.
 :::
 ```
 
-Define semantic HTML and stable theme hooks for each component. Validate supported names/attributes; recognized but unknown directives must produce an actionable error instead of dropping text. Markdown is permissive, so do not promise that every malformed delimiter can be detected.
+Alerts are root-level blockquotes whose opening line contains exactly one uppercase marker: `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, or `[!CAUTION]`. Preserve ordinary Markdown bodies and apply the same link, heading, asset, and security validation as elsewhere. Nested blockquotes, lowercase or unknown markers, and markers sharing their line with body text remain ordinary blockquotes. Alert syntax adds no custom title or attribute syntax.
+
+The engine emits `<aside class="mdd-alert mdd-note">` for a note, with the corresponding lowercase type class for the other alerts. Its first child is `<p class="mdd-component-label"><strong>Note</strong></p>`; the visible labels are Note, Tip, Important, Warning, and Caution. These are static article content, without live-region roles. Normalized Markdown preserves the `> [!TYPE]` marker and body. The reader composes the article into a page; themes own colors, icons, borders, and spacing. See [the alert contract](ALERTS.md) for all hooks and examples.
+
+The removed `:::note`, `:::tip`, and `:::warning` directives produce an actionable `REMOVED_COMPONENT` error identifying the replacement alert syntax and how to retain an optional custom title in the body. They must not silently drop content or continue as aliases. `:::details` retains its existing `details`/`summary` output, optional label, and `mdd-details` hook. Validate supported names/attributes; unknown directives produce an actionable error instead of dropping text. Markdown is permissive, so do not promise that every malformed delimiter can be detected.
 
 Disable raw author HTML in v0.1 and escape/sanitize generated content and unsafe URL schemes. Do not evaluate MDX, template expressions, config JavaScript, or theme JavaScript. Preserve readable component labels/bodies in the normalized Markdown output for agents, without navigation HTML or executable content.
 

@@ -34,6 +34,43 @@ async function compile(files: Record<string, string>, basePath = "/") {
 }
 
 describe("headless search", () => {
+  test.each([
+    ["NOTE", "Note"],
+    ["TIP", "Tip"],
+    ["IMPORTANT", "Important"],
+    ["WARNING", "Warning"],
+    ["CAUTION", "Caution"],
+  ])("indexes the readable %s alert label", async (marker, label) => {
+    const site = await compile({
+      "mdd/contents/index.md": `# Guide\n\n> [!${marker}]\n> Protect your credentials.`,
+    });
+    const index = createSearchIndex(site);
+    const expected = `${label} Protect your credentials.`;
+    expect(index.pages[0]?.sections[1]?.text).toBe(expected);
+    expect(search(index, "credentials")[0]?.excerpt).toBe(expected);
+    expect(search(index, label)).toHaveLength(1);
+  });
+
+  test.each([
+    ["escaped bracket", "> \\[!NOTE]\n> Literal body."],
+    ["escaped bang", "> [\\!NOTE]\n> Literal body."],
+    ["character reference", "> &#91;!NOTE]\n> Literal body."],
+    ["nested quote", "> > [!NOTE]\n> > Literal body."],
+    ["list quote", "- > [!NOTE]\n  > Literal body."],
+    ["inline code", "> `[!NOTE]`\n> Literal body."],
+    ["bold text", "> **[!NOTE]**\n> Literal body."],
+  ])(
+    "preserves %s as literal text in search excerpts",
+    async (_name, source) => {
+      const site = await compile({
+        "mdd/contents/index.md": `# Guide\n\n${source}`,
+      });
+      expect(search(createSearchIndex(site), "literal")[0]?.excerpt).toBe(
+        "[!NOTE] Literal body.",
+      );
+    },
+  );
+
   test("indexes only compiled readable page content, round trips JSON, and does not mutate its input", async () => {
     const site = await compile({
       "mdd/contents/index.md": `---
@@ -44,9 +81,10 @@ navTitle: Navigation secret
 # Welcome
 Read **important** [linked words](https://example.test/hidden-url).
 
-:::note[Careful]
-A helpful component.
-:::
+> [!NOTE]
+> **Careful**
+>
+> A helpful component.
 
 | Column | Other |
 | --- | --- |

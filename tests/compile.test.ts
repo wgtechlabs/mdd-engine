@@ -366,7 +366,7 @@ describe("compileProject", () => {
     test(`compiles a deterministic headless site at ${basePath}`, async () => {
       const projectDir = await fixture({
         "contents/index.md":
-          "# Home\n\n[Install](guide/install.md#install)\n\n[Root](/guide/)\n\n![Logo](assets/logo.png)\n\n:::tip[Start here]\nUse Markdown.\n:::\n",
+          "# Home\n\n[Install](guide/install.md#install)\n\n[Root](/guide/)\n\n![Logo](assets/logo.png)\n\n> [!TIP]\n> **Start here**\n>\n> Use Markdown.\n",
         "contents/guide/index.md":
           "---\nnavTitle: Getting started\norder: -1\n---\n# Guide\n",
         "contents/guide/install.md":

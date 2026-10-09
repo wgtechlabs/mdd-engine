@@ -3,6 +3,7 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
+import { transformAlerts } from "./alerts.js";
 import {
   type SearchIndex,
   type SearchPage,
@@ -18,7 +19,9 @@ function indexPage(page: Page): SearchPage {
   const sections: SearchSection[] = [{ title: "", url: page.url, text: "" }];
   let headingIndex = 0;
   const chunks: string[][] = [[]];
-  visit(parser.parse(page.markdown), (node) => {
+  const tree = parser.parse(page.markdown);
+  transformAlerts(tree, page.markdown);
+  visit(tree, (node) => {
     if (node.type === "definition" || node.type === "html") return SKIP;
     if (node.type === "heading") {
       const heading = page.headings[headingIndex++];
@@ -47,7 +50,11 @@ function indexPage(page: Page): SearchPage {
       node.type === "code" ||
       node.type === "inlineCode"
     )
-      text.push(node.value);
+      text.push(
+        node.type === "text"
+          ? (node.data?.mddAlertLabel ?? node.value)
+          : node.value,
+      );
     if ((node.type === "image" || node.type === "imageReference") && node.alt)
       text.push(node.alt);
   });

@@ -19,6 +19,7 @@ import remarkStringify from "remark-stringify";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
 import { parseDocument as parseYaml } from "yaml";
+import { transformAlerts } from "./alerts.js";
 import type { Diagnostic, Heading, Metadata } from "./types.js";
 
 export interface ParsedDocument {
@@ -62,8 +63,19 @@ const htmlRenderer = unified()
   })
   .use(rehypeStringify);
 
-const markdownRenderer = unified().use(remarkGfm).use(remarkStringify);
-const componentNames = new Set(["note", "tip", "warning", "details"]);
+const markdownRenderer = unified()
+  .use(remarkGfm)
+  .use(remarkStringify, {
+    handlers: {
+      text(node, _parent, state, info) {
+        // Only generated alert markers bypass normal Markdown escaping.
+        return node.data?.mddAlertLabel !== undefined
+          ? node.value
+          : state.safe(node.value, info);
+      },
+    },
+  });
+const removedNotices = new Set(["note", "tip", "warning"]);
 
 /** Shared syntax parser; callers validate the allowed document context. */
 export function parseMarkdown(source: string): Root {
@@ -132,6 +144,7 @@ export function parseDocument(
   diagnostics: Diagnostic[],
 ): ParsedDocument {
   const tree = parseMarkdown(source);
+  transformAlerts(tree, source);
   retainReferencedDefinitions(tree);
   const metadata: Metadata = {};
   const headings: Heading[] = [];
@@ -241,10 +254,18 @@ export function parseDocument(
     ) {
       return;
     }
-    if (node.type !== "containerDirective" || !componentNames.has(node.name)) {
+    if (removedNotices.has(node.name)) {
+      report(
+        "REMOVED_COMPONENT",
+        `The ${node.name} directive was removed; use > [!${node.name.toUpperCase()}] followed by quoted body lines. Keep any optional custom title as bold text in the alert body.`,
+        node,
+      );
+      return;
+    }
+    if (node.type !== "containerDirective" || node.name !== "details") {
       report(
         "UNKNOWN_COMPONENT",
-        `Unsupported component ${node.name}; use a note, tip, warning, or details container.`,
+        `Unsupported component ${node.name}; use a GitHub alert or a details container.`,
         node,
       );
       return;
@@ -258,7 +279,7 @@ export function parseDocument(
     }
     if (index === undefined || !parent) return;
     const first = node.children[0];
-    const defaultLabel = node.name.charAt(0).toUpperCase() + node.name.slice(1);
+    const defaultLabel = "Details";
     const label: Paragraph =
       first?.type === "paragraph" && first.data?.directiveLabel
         ? first
@@ -277,7 +298,7 @@ export function parseDocument(
     }
     label.children = [{ type: "strong", children: label.children }];
     label.data = {
-      hName: node.name === "details" ? "summary" : "p",
+      hName: "summary",
       hProperties: { className: ["mdd-component-label"] },
     };
     parent.children[index] = {
@@ -285,8 +306,8 @@ export function parseDocument(
       children: node.children,
       position: node.position,
       data: {
-        hName: node.name === "details" ? "details" : "aside",
-        hProperties: { className: [`mdd-${node.name}`] },
+        hName: "details",
+        hProperties: { className: ["mdd-details"] },
       },
     };
     // Revisit the replacement so nested content is validated exactly once.
