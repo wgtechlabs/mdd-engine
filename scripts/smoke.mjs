@@ -90,6 +90,15 @@ for (const basePath of ['/', '/docs/', '/repository/docs/']) {
   assert.equal(hits.length, 1);
   assert.equal(hits[0].url, basePath + 'guide/install/#mdd-requirements');
   assert.equal(hits[0].excerpt, 'Use a supported runtime.');
+  const lateMatch = search({ version: 1, pages: [{
+    title: 'Guide', url: basePath, description: '', sections: [{
+      title: '', url: basePath,
+      text: '😀 ﬄ Ａ '.repeat(80) + 'Selected ＴＨＥＭＥ scripts are trusted browser code.',
+    }],
+  }] }, 'theme')[0];
+  assert(lateMatch.excerpt.includes('Selected ＴＨＥＭＥ scripts'));
+  assert(lateMatch.excerpt.startsWith('…'));
+  assert(Array.from(lateMatch.excerpt).length <= 160);
   assert.deepEqual(search(index, 'community'), []);
   assert(result.site.pages.find(p => p.route === '/').html.includes(basePath + 'guide/install/#mdd-install'));
   const home = result.site.pages.find(p => p.route === '/');

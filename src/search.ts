@@ -119,11 +119,79 @@ function normalize(value: string): string {
     .trim();
 }
 
-function excerpt(value: string): string {
-  const characters = Array.from(value.replace(/\s+/gu, " ").trim());
-  return characters.length > 160
-    ? `${characters.slice(0, 159).join("")}…`
-    : characters.join("");
+/** Map a normalized match back to the original text, including NFKC expansions. */
+function matchRange(
+  value: string,
+  terms: string[],
+): [number, number] | undefined {
+  const normalized = value.normalize("NFKC").toLowerCase();
+  let start = -1;
+  let end = -1;
+  for (const term of terms) {
+    const found = normalized.indexOf(term);
+    if (
+      found >= 0 &&
+      (start < 0 ||
+        found < start ||
+        (found === start && found + term.length > end))
+    ) {
+      start = found;
+      end = found + term.length;
+    }
+  }
+  if (start < 0) return;
+
+  const groups: { text: string; start: number; end: number }[] = [];
+  for (const { segment, index } of new Intl.Segmenter(undefined, {
+    granularity: "grapheme",
+  }).segment(value)) {
+    let group = {
+      text: segment.normalize("NFKC"),
+      start: index,
+      end: index + segment.length,
+    };
+    // NFKC can combine adjacent graphemes, e.g. compatibility Hangul ㄱㅏ → 가.
+    while (groups.length) {
+      const previous = groups.at(-1);
+      if (!previous) break;
+      const joined = previous.text + group.text;
+      const combined = joined.normalize("NFKC");
+      if (combined === joined) break;
+      groups.pop();
+      group = { text: combined, start: previous.start, end: group.end };
+    }
+    groups.push(group);
+  }
+  // Match against whole-field lowercase for contextual letters such as sigma.
+  // Per-group lowercase is used only for lengths (including expansions like İ).
+  let offset = 0;
+  let originalStart = 0;
+  for (const group of groups) {
+    const next = offset + group.text.toLowerCase().length;
+    if (offset <= start && start < next) originalStart = group.start;
+    if (offset < end && end <= next) return [originalStart, group.end];
+    offset = next;
+  }
+}
+
+function excerpt(value: string, terms: string[]): string {
+  const text = value.replace(/\s+/gu, " ").trim();
+  const characters = Array.from(text);
+  if (characters.length <= 160) return text;
+  const match = matchRange(text, terms);
+  const matchStart = match ? Array.from(text.slice(0, match[0])).length : 0;
+  const matchLength = match
+    ? Array.from(text.slice(match[0], match[1])).length
+    : 0;
+  // Reserve room for both ellipses and the matched term before adding context.
+  const context = Math.min(40, Math.max(0, 158 - matchLength));
+  const start = Math.min(
+    Math.max(0, matchStart - context),
+    characters.length - 159,
+  );
+  let end = Math.min(characters.length, start + 160 - (start > 0 ? 1 : 0));
+  if (end < characters.length) end--;
+  return `${start > 0 ? "…" : ""}${characters.slice(start, end).join("")}${end < characters.length ? "…" : ""}`;
 }
 
 /** Return at most one hit per page, without filesystem, network, or DOM access. */
@@ -192,16 +260,23 @@ export function search(
     matches.sort((a, b) => b.score - a.score);
     const best = matches[0]?.section;
     const destination = metadataMatch ? undefined : best;
+    const sources = [
+      best?.text ?? "",
+      page.description,
+      ...page.sections.map((section) => section.text),
+    ];
+    const source =
+      sources.find((text) => {
+        const normalized = normalize(text);
+        return terms.some((term) => normalized.includes(term));
+      }) ??
+      sources.find((text) => text) ??
+      page.title;
     results.push({
       title: page.title,
       url: destination?.url ?? page.url,
       ...(destination?.title ? { section: destination.title } : {}),
-      excerpt: excerpt(
-        best?.text ||
-          page.description ||
-          page.sections.find((section) => section.text)?.text ||
-          page.title,
-      ),
+      excerpt: excerpt(source, terms),
       score:
         weights.reduce((sum, weight) => sum + weight, 0) +
         (title === phrase
