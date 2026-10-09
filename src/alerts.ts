@@ -2,7 +2,7 @@ import type { Root, Text } from "mdast";
 
 declare module "mdast" {
   interface TextData {
-    mddAlertMarker?: true;
+    mddAlertLabel?: string;
   }
 }
 
@@ -41,7 +41,7 @@ export function transformAlerts(tree: Root, source: string): void {
     const markerText: Text = {
       type: "text",
       value: `[!${kind}]`,
-      data: { mddAlertMarker: true },
+      data: { mddAlertLabel: label },
     };
     node.children.unshift({
       type: "paragraph",

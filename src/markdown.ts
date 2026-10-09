@@ -69,13 +69,18 @@ const markdownRenderer = unified()
     handlers: {
       text(node, _parent, state, info) {
         // Only generated alert markers bypass normal Markdown escaping.
-        return node.data?.mddAlertMarker === true
+        return node.data?.mddAlertLabel !== undefined
           ? node.value
           : state.safe(node.value, info);
       },
     },
   });
 const removedNotices = new Set(["note", "tip", "warning"]);
+
+/** Shared syntax parser; callers validate the allowed document context. */
+export function parseMarkdown(source: string): Root {
+  return parser.parse(source);
+}
 
 /** Keep the same first-wins, reachable definitions that the HTML renderer uses. */
 function retainReferencedDefinitions(tree: Root): void {
@@ -138,7 +143,7 @@ export function parseDocument(
   file: string,
   diagnostics: Diagnostic[],
 ): ParsedDocument {
-  const tree = parser.parse(source);
+  const tree = parseMarkdown(source);
   transformAlerts(tree, source);
   retainReferencedDefinitions(tree);
   const metadata: Metadata = {};

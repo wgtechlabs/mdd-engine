@@ -8,6 +8,8 @@ Status: v0.1 engine implemented for review. Product boundaries and toolchain wer
 
 Own configuration/content validation, Markdown/component rendering, metadata, navigation, heading anchors, local link resolution, asset discovery, and structured diagnostics. Leave repository fetching, frontend layout, theme application, static file emission, HTTP serving, credentials, and deployment to mdd or its action.
 
+The engine also owns shared social-footer validation and headless search indexing/querying. MDD owns the footer layout, social icons, index delivery, and search interaction. Themes style these interfaces.
+
 There is one content compiler. mdd and CI consume this contract rather than recreating it.
 
 ## Toolchain and package
@@ -44,15 +46,19 @@ compileProject({
 | `site.navigation` | Ordered page/group tree |
 | `site.assets` | Explicit files needed by content, with source and destination mappings |
 | `site.theme` | Resolved theme selection and locations for mdd to apply |
+| `site.footer` | Optional project-relative shared footer source and ordered `{ label, url }` social links |
 | `diagnostics` | Stable code, severity, message, file and line/column where available |
 
 Keep parser ASTs and frontend framework types private. Expected authoring failures become diagnostics. Unexpected operational failures must retain useful context and fail the build. Do not silently produce a publishable partial site.
+
+`createSearchIndex(site): SearchIndex` builds versioned JSON data from successfully compiled pages. `search(index, query, { limit? }): SearchResult[]` returns one result per matching page with a validated page/section URL and plain-text excerpt. `validateSearchIndex(unknown)` validates and narrows deserialized data. Import queries/validation/types from `@wgtechlabs/mdd-engine/search` for dependency-free browser use; compilation and index construction belong to the package root. See [SEARCH.md](SEARCH.md) for schema, deterministic ranking, bounds, and text-rendering requirements.
 
 ## Configuration and directory contract
 
 ```text
 mdd/
   config.json
+  footer.md                 # optional; shared socials only
   contents/
     index.md
     get-started/index.md
@@ -82,6 +88,8 @@ All fields are optional. Without config, use `contents/`, `themes/`, the built-i
 Custom paths resolve from the configuration directory. They may point elsewhere inside the checked-out project; prevent escaping the project through traversal or symlinks. Reject overlapping content/theme roots that would make discovery ambiguous. Scan only the selected content root and referenced assets; never publish `.git`, environment files, or arbitrary project files.
 
 Require a content root and `index.md` homepage in v0.1. Keep generated output outside scanned content. `plugins/` is reserved future scope: do not create a loader or accept plugin settings that do nothing.
+
+Optional `footer.md` lives directly in the resolved `mddDir`. Missing/blank means no footer. A nonblank file must contain exactly one `:::socials` block with a flat unordered list of plain-text labeled HTTPS links. Invalid content fails compilation with source diagnostics. It is never an article, including when the configured content root contains it. Other files named `footer.md` remain normal content. See [FOOTER.md](FOOTER.md) for validation details.
 
 ## Routes, navigation, and links
 
@@ -133,6 +141,8 @@ Sources: [remark-gfm](https://github.com/remarkjs/remark-gfm), [remark-directive
 6. Component content is readable in both HTML fragments and normalized Markdown.
 7. The packed package contains runtime JavaScript and types, excludes secrets/build debris, and runs under all three supported Node majors without Bun installed; the declared minimum is verified before publication.
 8. Build Flow validates, builds, and publishes the same release version to both registries before GitHub Release completion is reported.
+9. Optional social-footer metadata is deterministic, safely validated, and excluded from pages, navigation, and search.
+10. Serialized search preserves compiled encoded paths and duplicate-heading anchors at all supported base paths; its standalone query module bundles for browsers without compiler or Node dependencies.
 
 Use a small fixture-based Bun test suite plus one Node package smoke check reused across the compatibility matrix. Exact parser dependencies and API field names may be refined before the first release; preserve these ownership boundaries.
 

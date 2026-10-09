@@ -12,6 +12,7 @@ Built with TypeScript and Bun. Runs on Node.js 22, 24, and 26 without Bun. The d
 my-project/
   mdd/
     config.json           # optional
+    footer.md             # optional shared social links
     contents/
       index.md            # required homepage
       get-started/
@@ -69,8 +70,38 @@ The result includes:
 - `navigation`: sorted folder/page tree, with optional landing URLs.
 - `assets`: referenced content files with checkout-relative sources, documentation-root-relative destinations, and public URLs.
 - `theme`: the built-in default or selected theme file locations.
+- `footer`: optional shared footer source and validated social-link data.
 
 Paths in the model use forward slashes. Resolve sources against the same `projectDir` used to compile. Asset destinations are filesystem paths, while asset URLs and page routes are URL-encoded. Decode page-route segments when deriving output directories. Prefix asset destinations with the documentation output directory when exporting; do not prefix them with a GitHub repository name a second time. The engine emits no files and starts no server.
+
+## Headless search
+
+Build a serializable index from a successful compilation:
+
+```js
+import { createSearchIndex } from '@wgtechlabs/mdd-engine';
+import { search } from '@wgtechlabs/mdd-engine/search';
+
+const index = createSearchIndex(result.site);
+const restored = JSON.parse(JSON.stringify(index));
+console.log(search(restored, 'installation', { limit: 10 }));
+// [{ title, url, section?, excerpt, score }]
+```
+
+The dependency-free `/search` entry point works in browsers and Node. Results reuse compiled page URLs and heading anchors, respect the public base path, and contain plain text for the consuming interface to display safely. MDD owns exporting/loading the index and presenting search controls. See [search matching, limits, and validation](docs/SEARCH.md).
+
+## Shared social footer
+
+Write social links once in `mdd/footer.md`:
+
+```markdown
+:::socials
+- [GitHub](https://github.com/wgtechlabs)
+- [Community](https://example.org/community)
+:::
+```
+
+The engine returns these as `site.footer.socials`, with plain labels and validated absolute HTTPS URLs. It does not render a footer or select icons. MDD composes the main footer and its theme styles it. This file is excluded from pages, navigation, and search; `socials` is not an article component. See the [footer format and boundaries](docs/FOOTER.md).
 
 ## Markdown and components
 
@@ -124,7 +155,7 @@ bun run coverage
 bun audit
 ```
 
-`bun run build` emits Node ESM and TypeScript declarations to `dist/`. `bun run smoke` creates a package archive, installs it into an isolated consumer, and runs it with the current Node binary. It checks that Bun is unavailable inside the consumer and that all three base-path fixtures compile. On POSIX systems, `MDD_TEST_NODE_BINARIES` can contain colon-separated Node binary paths to exercise the same archive across versions.
+`bun run build` emits Node ESM and TypeScript declarations to `dist/`. `bun run smoke` creates a package archive, installs it into an isolated consumer, and runs it with the current Node binary. It checks compilation, footer data, and serialized search at all three base paths without Bun in the runtime, and bundles the isolated search entry for browsers. On POSIX systems, `MDD_TEST_NODE_BINARIES` can contain colon-separated Node binary paths to exercise the same archive across versions.
 
 Follow [Clean Workflow](AGENTS.md), [contributing](CONTRIBUTING.md), and the [engine contract](docs/SPEC.md). See [verification](docs/VERIFICATION.md) for the checks performed during bootstrap.
 
