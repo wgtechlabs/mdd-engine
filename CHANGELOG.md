@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [1.0.0] - 2026-10-09
+
+### Added
+
+- add headless search and shared footer metadata (#15)
+
+### Changed
+
+- **BREAKING:** adopt github alerts and remove notice directives (#17)
+
 ## [0.1.1] - 2026-10-06
 
 ### Changed
