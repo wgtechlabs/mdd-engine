@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [1.1.0] - 2026-10-09
+
+### Added
+
+- add section search and bounded typo matching (#21)
+
 ## [1.0.1] - 2026-10-09
 
 ### Changed
