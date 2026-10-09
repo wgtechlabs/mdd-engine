@@ -10,13 +10,14 @@ import {
   type SearchSection,
   validateSearchIndex,
 } from "./search.js";
-import type { Page, Site } from "./types.js";
+import type { Heading, Page, Site } from "./types.js";
 
 const parser = unified().use(remarkParse).use(remarkGfm);
 const blockTypes = new Set(["paragraph", "code", "tableCell", "listItem"]);
 
-function indexPage(page: Page): SearchPage {
+function indexPage(page: Page, breadcrumbs: string[]): SearchPage {
   const sections: SearchSection[] = [{ title: "", url: page.url, text: "" }];
+  const ancestors: Heading[] = [];
   let headingIndex = 0;
   const chunks: string[][] = [[]];
   const tree = parser.parse(page.markdown);
@@ -34,11 +35,27 @@ function indexPage(page: Page): SearchPage {
           "Search indexing requires matching compiled Markdown and headings.",
         );
       }
+      while (
+        ancestors.length &&
+        (ancestors.at(-1)?.depth ?? 0) >= heading.depth
+      )
+        ancestors.pop();
       sections.push({
         title: heading.text,
         url: `${page.url}#${encodeURIComponent(heading.id)}`,
         text: "",
+        breadcrumbs: ancestors
+          .filter(
+            (ancestor) =>
+              !(
+                ancestor.depth === 1 &&
+                ancestor.text.normalize("NFKC").toLowerCase() ===
+                  page.title.normalize("NFKC").toLowerCase()
+              ),
+          )
+          .map((ancestor) => ancestor.text),
       });
+      ancestors.push(heading);
       chunks.push([]);
       return SKIP;
     }
@@ -70,13 +87,34 @@ function indexPage(page: Page): SearchPage {
     url: page.url,
     title: page.title,
     description: page.description ?? "",
+    breadcrumbs,
     sections,
   };
 }
 
 /** Build only from successfully compiled pages; no source paths or HTML are indexed. */
 export function createSearchIndex(site: Site): SearchIndex {
-  const index: SearchIndex = { version: 1, pages: site.pages.map(indexPage) };
+  const navigation = new Map<string, string[]>();
+  const pending = site.navigation.map((item) => ({
+    item,
+    ancestors: [] as string[],
+  }));
+  while (pending.length) {
+    const entry = pending.pop();
+    if (!entry) break;
+    const { item, ancestors } = entry;
+    if (ancestors.length > 64)
+      throw new TypeError("Search navigation exceeds 64 ancestor labels.");
+    if (item.url) navigation.set(item.url, ancestors);
+    for (const child of item.children ?? [])
+      pending.push({ item: child, ancestors: [...ancestors, item.title] });
+  }
+  const index: SearchIndex = {
+    version: 1,
+    pages: site.pages.map((page) =>
+      indexPage(page, navigation.get(page.url) ?? []),
+    ),
+  };
   index.pages.sort((a, b) => (a.url < b.url ? -1 : a.url > b.url ? 1 : 0));
   validateSearchIndex(index);
   return index;

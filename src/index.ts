@@ -23,6 +23,7 @@ import type {
 
 export {
   type SearchIndex,
+  type SearchMatch,
   type SearchOptions,
   type SearchPage,
   type SearchResult,

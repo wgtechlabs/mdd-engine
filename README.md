@@ -85,6 +85,10 @@ import { search } from '@wgtechlabs/mdd-engine/search';
 const index = createSearchIndex(result.site);
 const restored = JSON.parse(JSON.stringify(index));
 console.log(search(restored, 'installation', { limit: 10 }));
+// Multiple heading hits, breadcrumbs, and ranges for UI highlights.
+console.log(search(restored, 'instalation', {
+  mode: 'sections', fuzzy: true, limit: 8,
+}));
 // [{ title, url, section?, excerpt, score }]
 ```
 
