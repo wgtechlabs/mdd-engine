@@ -242,8 +242,130 @@ const answer = 42;
     });
     const result = search(createSearchIndex(site), "searchable")[0];
     expect(Array.from(result?.excerpt ?? "")).toHaveLength(160);
-    expect(result?.excerpt.endsWith("…")).toBe(true);
+    expect(result?.excerpt.startsWith("…")).toBe(true);
+    expect(result?.excerpt.endsWith("searchable")).toBe(true);
     expect(result?.excerpt).not.toContain("\uFFFD");
+  });
+
+  test("shows a late body match with context without changing its destination or score", async () => {
+    const site = await compile({
+      "mdd/contents/index.md": `# Writing pages\n\n## Highlight useful details\n\n${"Explain alerts. ".repeat(30)}Selected theme scripts are trusted browser code. ${"More context. ".repeat(20)}`,
+    });
+    const index = createSearchIndex(site);
+    const before = JSON.stringify(index);
+    const hit = search(index, "theme")[0];
+    expect(hit).toMatchObject({
+      title: "Writing pages",
+      section: "Highlight useful details",
+      url: "/#mdd-highlight-useful-details",
+      score: 1,
+    });
+    expect(hit?.excerpt).toContain(
+      "Selected theme scripts are trusted browser code.",
+    );
+    expect(hit?.excerpt.startsWith("…")).toBe(true);
+    expect(hit?.excerpt.endsWith("…")).toBe(true);
+    expect(Array.from(hit?.excerpt ?? "").length).toBeLessThanOrEqual(160);
+    expect(JSON.stringify(index)).toBe(before);
+  });
+
+  test("uses matching descriptions and later sections instead of unrelated fallback text", () => {
+    const index: SearchIndex = {
+      version: 1,
+      pages: [
+        {
+          url: "/",
+          title: "Guide",
+          description: `${"Overview. ".repeat(30)}Theme metadata.`,
+          sections: [
+            {
+              url: "/#mdd-intro",
+              title: "Intro",
+              text: "Unrelated opening body.",
+            },
+            {
+              url: "/#mdd-style",
+              title: "Style",
+              text: `${"Style notes. ".repeat(30)}Theme settings.`,
+            },
+            {
+              url: "/#mdd-options",
+              title: "Options",
+              text: "Portable configuration.",
+            },
+          ],
+        },
+      ],
+    };
+    expect(search(index, "theme")[0]).toMatchObject({ url: "/" });
+    // Matching best-section body retains priority over a matching description.
+    expect(search(index, "theme")[0]?.excerpt).toContain("Theme settings.");
+    const page = index.pages[0];
+    if (!page) throw new Error("Expected page");
+    page.sections = page.sections.filter(
+      (section) => section.title !== "Style",
+    );
+    expect(search(index, "theme")[0]?.excerpt).toContain("Theme metadata.");
+    page.description = "Unrelated summary.";
+    page.sections.push({
+      url: "/#mdd-style",
+      title: "Style",
+      text: `${"Notes. ".repeat(50)}Theme settings.`,
+    });
+    const split = search(index, "theme portable")[0];
+    expect(split?.url).toBe("/");
+    expect(split?.section).toBeUndefined();
+    expect(split?.excerpt).toContain("Portable configuration.");
+  });
+
+  test.each([
+    ["fullwidth", "ＴＨＥＭＥ", "theme"],
+    ["ligature", "oﬃce", "office"],
+    ["decomposed accent", "Cafe\u0301", "café"],
+    ["lowercase expansion", "İstanbul", "i"],
+    ["Greek final sigma", "ΟΣ", "ος"],
+    ["compatibility Hangul", "ㄱㅏ", "가"],
+    ["long term", "x".repeat(130), "x".repeat(130)],
+  ])("preserves a late %s match in original text", (_case, original, query) => {
+    const text = `${"😀 ﬄ Ａ ".repeat(80)}${original} ${"尾文 ".repeat(80)}`;
+    const index: SearchIndex = {
+      version: 1,
+      pages: [
+        {
+          title: "Page",
+          url: "/",
+          description: "",
+          sections: [{ title: "", url: "/", text }],
+        },
+      ],
+    };
+    const hit = search(index, query)[0];
+    expect(hit?.excerpt).toContain(original);
+    expect(Array.from(hit?.excerpt ?? "").length).toBeLessThanOrEqual(160);
+    expect(hit?.excerpt).not.toContain("\uFFFD");
+  });
+
+  test("keeps short excerpts and title-only fallbacks, with stable snippets across query order", () => {
+    const index: SearchIndex = {
+      version: 1,
+      pages: [
+        {
+          title: "Guide",
+          url: "/",
+          description: "",
+          sections: [{ title: "", url: "/", text: "  Short\nbody.  " }],
+        },
+      ],
+    };
+    expect(search(index, "guide")[0]?.excerpt).toBe("Short body.");
+    const section = index.pages[0]?.sections[0];
+    if (!section) throw new Error("Expected section");
+    section.text = `First needle. ${"Middle. ".repeat(50)}Second keyword.`;
+    const forward = search(index, "needle keyword")[0];
+    expect(forward).toEqual(search(index, "keyword needle")[0]);
+    expect(forward?.excerpt.startsWith("First needle.")).toBe(true);
+    expect(forward?.excerpt.endsWith("…")).toBe(true);
+    expect(Array.from(forward?.excerpt ?? "").length).toBeLessThanOrEqual(160);
   });
 
   test("rejects malformed and executable URLs in serialized indexes", () => {
