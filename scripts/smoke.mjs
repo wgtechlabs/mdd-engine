@@ -27,6 +27,8 @@ try {
     .split("\n");
   assert(entries.includes("package/dist/index.js"));
   assert(entries.includes("package/dist/index.d.ts"));
+  assert(entries.includes("package/dist/search.js"));
+  assert(entries.includes("package/dist/search.d.ts"));
   assert(
     entries.every((entry) =>
       /^package\/(dist\/|package\.json$|README\.md$|LICENSE$)/.test(entry),
@@ -49,27 +51,67 @@ try {
   await mkdir(path.join(contents, "guide"), { recursive: true });
   await writeFile(
     path.join(contents, "index.md"),
-    "# Home\n\n[Install](guide/install.md#install)\n\n:::note\nA headless package.\n:::\n",
+    "# Home\n\n" +
+      ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"]
+        .map(
+          (type) =>
+            `> [!${type}]\n> A headless package. [Install](guide/install.md#install)\n`,
+        )
+        .join("\n"),
+  );
+  await writeFile(
+    path.join(temp, "mdd", "footer.md"),
+    ":::socials\n- [Community](https://example.com/community)\n:::\n",
   );
   await writeFile(
     path.join(contents, "guide", "install.md"),
-    "# Install\n\n[Home](../index.md)\n",
+    "# Install\n\n[Home](../index.md)\n\n## Requirements\n\nUse a supported runtime.\n",
   );
   await writeFile(
     path.join(temp, "consumer.mjs"),
     `
 import assert from 'node:assert/strict';
 import { rm, writeFile } from 'node:fs/promises';
-import { compileProject } from '@wgtechlabs/mdd-engine';
+import { compileProject, createSearchIndex } from '@wgtechlabs/mdd-engine';
+import { search, validateSearchIndex } from '@wgtechlabs/mdd-engine/search';
 assert.equal(typeof globalThis.Bun, 'undefined');
 for (const basePath of ['/', '/docs/', '/repository/docs/']) {
   const result = await compileProject({projectDir: process.cwd(), basePath});
   assert.deepEqual(result.diagnostics, []);
   assert.equal(result.site.pages.length, 2);
   assert.equal(result.site.title, 'Home');
+  assert.deepEqual(result.site.footer, {
+    source: 'mdd/footer.md',
+    socials: [{label: 'Community', url: 'https://example.com/community'}],
+  });
+  const index = JSON.parse(JSON.stringify(createSearchIndex(result.site)));
+  validateSearchIndex(index);
+  const hits = search(index, 'supported runtime');
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].url, basePath + 'guide/install/#mdd-requirements');
+  assert.equal(hits[0].excerpt, 'Use a supported runtime.');
+  assert.deepEqual(search(index, 'community'), []);
   assert(result.site.pages.find(p => p.route === '/').html.includes(basePath + 'guide/install/#mdd-install'));
+  const home = result.site.pages.find(p => p.route === '/');
+  assert.equal(index.pages.find(p => p.url === basePath).sections[1].text,
+    ['Note', 'Tip', 'Important', 'Warning', 'Caution']
+      .map(label => label + ' A headless package. Install').join(' '));
+  for (const type of ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']) {
+    assert(home.html.includes('class="mdd-alert mdd-' + type.toLowerCase() + '"'));
+    assert(home.markdown.includes('> [!' + type + ']'));
+  }
+  assert(!home.html.includes('role="alert"'));
   assert.deepEqual(await compileProject({projectDir: process.cwd(), basePath}), result);
 }
+for (const name of ['note', 'tip', 'warning']) {
+  await writeFile('mdd/contents/legacy.md', '# Legacy\\n\\n:::' + name + '[Custom title]\\nBody\\n:::\\n');
+  const legacy = await compileProject({projectDir: process.cwd()});
+  assert.equal(legacy.site, undefined);
+  assert.equal(legacy.diagnostics[0].code, 'REMOVED_COMPONENT');
+  assert.equal(legacy.diagnostics[0].line, 3);
+  assert(legacy.diagnostics[0].message.includes('> [!' + name.toUpperCase() + ']'));
+}
+await rm('mdd/contents/legacy.md');
 // Exercise rendering overflow and parsing overflow in each real Node runtime.
 for (const depth of [2_000, 10_000]) {
   await writeFile('mdd/contents/deep.md', '> '.repeat(depth) + 'Nested text');
@@ -80,6 +122,11 @@ for (const depth of [2_000, 10_000]) {
   ]);
 }
 await rm('mdd/contents/deep.md');
+await writeFile('mdd/footer.md', ':::socials\\n- [Unsafe](javascript:alert(1))\\n:::\\n');
+const invalidFooter = await compileProject({projectDir: process.cwd()});
+assert.equal(invalidFooter.site, undefined);
+assert(invalidFooter.diagnostics.some(d => d.file === 'mdd/footer.md'));
+await writeFile('mdd/footer.md', ':::socials\\n- [Community](https://example.com/community)\\n:::\\n');
 console.log('Packed consumer passed on Node ' + process.version);
 `,
   );
@@ -95,6 +142,27 @@ console.log('Packed consumer passed on Node ' + process.version);
   }
   const manifest = JSON.parse(
     await readFile(path.join(root, "package.json"), "utf8"),
+  );
+  const browserBuild = path.join(temp, "browser");
+  execFileSync(
+    "bun",
+    [
+      "build",
+      "--target",
+      "browser",
+      "--outdir",
+      browserBuild,
+      path.join(temp, "node_modules/@wgtechlabs/mdd-engine/dist/search.js"),
+    ],
+    {
+      cwd: temp,
+      stdio: "pipe",
+    },
+  );
+  const querySource = await readFile(path.join(root, "dist/search.js"), "utf8");
+  assert(
+    !/^import\s/m.test(querySource),
+    "Search query must remain dependency-free",
   );
   assert.equal(manifest.engines.node, ">=22.0.0");
   const runtimeFiles = await readdir(path.join(root, "dist"));

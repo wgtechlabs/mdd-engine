@@ -8,6 +8,7 @@ export interface Project {
   title?: string;
   theme: Theme;
   files: string[];
+  footer?: string;
 }
 
 export class AuthoringError extends Error {
@@ -215,7 +216,7 @@ async function optionalFile(
   return safeFile(root, file);
 }
 
-async function scan(root: string): Promise<string[]> {
+async function scan(root: string, excludedFile?: string): Promise<string[]> {
   const files: string[] = [];
   async function walk(directory: string): Promise<void> {
     const entries = await readdir(directory, { withFileTypes: true }).catch(
@@ -236,6 +237,7 @@ async function scan(root: string): Promise<string[]> {
           `Content discovery does not follow symlinks: ${file}`,
         );
       }
+      if (file === excludedFile) continue;
       if (entry.isDirectory()) await walk(file);
       else if (path.extname(entry.name).toLowerCase() === ".md")
         files.push(await safeFile(root, file));
@@ -266,6 +268,15 @@ export async function loadProject(
       root,
       relativePath(options.mddDir ?? "mdd", "mddDir"),
     );
+    const footerPath = path.join(mddRoot, "footer.md");
+    source = relativeSource(root, footerPath);
+    const footer = await optionalFile(root, footerPath);
+    if (footer && (await lstat(footerPath)).isSymbolicLink()) {
+      throw new AuthoringError(
+        "FOOTER_SYMLINK",
+        "The shared footer must be a regular file, not a symlink.",
+      );
+    }
     const configPath = path.join(mddRoot, "config.json");
     source = relativeSource(root, configPath);
     const configFile = await optionalFile(root, configPath);
@@ -368,7 +379,7 @@ export async function loadProject(
       };
     }
     source = relativeSource(root, contentsRoot);
-    const files = await scan(contentsRoot);
+    const files = await scan(contentsRoot, footer ?? footerPath);
     if (!files.includes(path.join(contentsRoot, "index.md"))) {
       source = relativeSource(root, path.join(contentsRoot, "index.md"));
       throw new AuthoringError(
@@ -378,7 +389,14 @@ export async function loadProject(
     }
     if (diagnostics.some((diagnostic) => diagnostic.severity === "error"))
       return undefined;
-    return { root, contentsRoot, title, theme, files };
+    return {
+      root,
+      contentsRoot,
+      title,
+      theme,
+      files,
+      ...(footer ? { footer } : {}),
+    };
   } catch (error) {
     if (!(error instanceof AuthoringError)) throw error;
     diagnostics.push({

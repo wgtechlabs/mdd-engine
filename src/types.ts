@@ -53,6 +53,17 @@ export type Theme =
   | { name: "default" }
   | { name: string; directory: string; css: string; js?: string };
 
+export interface SocialLink {
+  label: string;
+  url: string;
+}
+
+export interface Footer {
+  /** POSIX path relative to projectDir; not a documentation page. */
+  source: string;
+  socials: SocialLink[];
+}
+
 export interface Site {
   title: string;
   basePath: string;
@@ -60,6 +71,7 @@ export interface Site {
   navigation: NavigationItem[];
   assets: Asset[];
   theme: Theme;
+  footer?: Footer;
 }
 
 export interface CompileOptions {

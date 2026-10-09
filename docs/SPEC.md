@@ -8,6 +8,8 @@ Status: v0.1 engine implemented for review. Product boundaries and toolchain wer
 
 Own configuration/content validation, Markdown/component rendering, metadata, navigation, heading anchors, local link resolution, asset discovery, and structured diagnostics. Leave repository fetching, frontend layout, theme application, static file emission, HTTP serving, credentials, and deployment to mdd or its action.
 
+The engine also owns shared social-footer validation and headless search indexing/querying. MDD owns the footer layout, social icons, index delivery, and search interaction. Themes style these interfaces.
+
 There is one content compiler. mdd and CI consume this contract rather than recreating it.
 
 ## Toolchain and package
@@ -44,15 +46,19 @@ compileProject({
 | `site.navigation` | Ordered page/group tree |
 | `site.assets` | Explicit files needed by content, with source and destination mappings |
 | `site.theme` | Resolved theme selection and locations for mdd to apply |
+| `site.footer` | Optional project-relative shared footer source and ordered `{ label, url }` social links |
 | `diagnostics` | Stable code, severity, message, file and line/column where available |
 
 Keep parser ASTs and frontend framework types private. Expected authoring failures become diagnostics. Unexpected operational failures must retain useful context and fail the build. Do not silently produce a publishable partial site.
+
+`createSearchIndex(site): SearchIndex` builds versioned JSON data from successfully compiled pages. `search(index, query, { limit? }): SearchResult[]` returns one result per matching page with a validated page/section URL and plain-text excerpt. `validateSearchIndex(unknown)` validates and narrows deserialized data. Import queries/validation/types from `@wgtechlabs/mdd-engine/search` for dependency-free browser use; compilation and index construction belong to the package root. See [SEARCH.md](SEARCH.md) for schema, deterministic ranking, bounds, and text-rendering requirements.
 
 ## Configuration and directory contract
 
 ```text
 mdd/
   config.json
+  footer.md                 # optional; shared socials only
   contents/
     index.md
     get-started/index.md
@@ -83,6 +89,8 @@ Custom paths resolve from the configuration directory. They may point elsewhere 
 
 Require a content root and `index.md` homepage in v0.1. Keep generated output outside scanned content. `plugins/` is reserved future scope: do not create a loader or accept plugin settings that do nothing.
 
+Optional `footer.md` lives directly in the resolved `mddDir`. Missing/blank means no footer. A nonblank file must contain exactly one `:::socials` block with a flat unordered list of plain-text labeled HTTPS links. Invalid content fails compilation with source diagnostics. It is never an article, including when the configured content root contains it. Other files named `footer.md` remain normal content. See [FOOTER.md](FOOTER.md) for validation details.
+
 ## Routes, navigation, and links
 
 | Relative content path | Logical route |
@@ -102,19 +110,22 @@ Resolve relative `.md` links and local image references against their source fil
 
 ## Markdown components and headless output
 
-Use an established Markdown parser with a documented GFM subset (tables, task lists, strikethrough) and directive support. First component set: `note`, `tip`, `warning`, and `details`.
+Use an established Markdown parser with a documented GFM subset (tables, task lists, strikethrough), GitHub-style alerts, and a `details` directive.
 
 ```markdown
-:::note
-An ordinary Markdown paragraph inside a callout.
-:::
+> [!NOTE]
+> An ordinary Markdown paragraph inside an alert.
 
 :::details[More information]
 Additional Markdown content.
 :::
 ```
 
-Define semantic HTML and stable theme hooks for each component. Validate supported names/attributes; recognized but unknown directives must produce an actionable error instead of dropping text. Markdown is permissive, so do not promise that every malformed delimiter can be detected.
+Alerts are root-level blockquotes whose opening line contains exactly one uppercase marker: `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, or `[!CAUTION]`. Preserve ordinary Markdown bodies and apply the same link, heading, asset, and security validation as elsewhere. Nested blockquotes, lowercase or unknown markers, and markers sharing their line with body text remain ordinary blockquotes. Alert syntax adds no custom title or attribute syntax.
+
+The engine emits `<aside class="mdd-alert mdd-note">` for a note, with the corresponding lowercase type class for the other alerts. Its first child is `<p class="mdd-component-label"><strong>Note</strong></p>`; the visible labels are Note, Tip, Important, Warning, and Caution. These are static article content, without live-region roles. Normalized Markdown preserves the `> [!TYPE]` marker and body. The reader composes the article into a page; themes own colors, icons, borders, and spacing. See [the alert contract](ALERTS.md) for all hooks and examples.
+
+The removed `:::note`, `:::tip`, and `:::warning` directives produce an actionable `REMOVED_COMPONENT` error identifying the replacement alert syntax and how to retain an optional custom title in the body. They must not silently drop content or continue as aliases. `:::details` retains its existing `details`/`summary` output, optional label, and `mdd-details` hook. Validate supported names/attributes; unknown directives produce an actionable error instead of dropping text. Markdown is permissive, so do not promise that every malformed delimiter can be detected.
 
 Disable raw author HTML in v0.1 and escape/sanitize generated content and unsafe URL schemes. Do not evaluate MDX, template expressions, config JavaScript, or theme JavaScript. Preserve readable component labels/bodies in the normalized Markdown output for agents, without navigation HTML or executable content.
 
@@ -130,6 +141,8 @@ Sources: [remark-gfm](https://github.com/remarkjs/remark-gfm), [remark-directive
 6. Component content is readable in both HTML fragments and normalized Markdown.
 7. The packed package contains runtime JavaScript and types, excludes secrets/build debris, and runs under all three supported Node majors without Bun installed; the declared minimum is verified before publication.
 8. Build Flow validates, builds, and publishes the same release version to both registries before GitHub Release completion is reported.
+9. Optional social-footer metadata is deterministic, safely validated, and excluded from pages, navigation, and search.
+10. Serialized search preserves compiled encoded paths and duplicate-heading anchors at all supported base paths; its standalone query module bundles for browsers without compiler or Node dependencies.
 
 Use a small fixture-based Bun test suite plus one Node package smoke check reused across the compatibility matrix. Exact parser dependencies and API field names may be refined before the first release; preserve these ownership boundaries.
 

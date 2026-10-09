@@ -13,21 +13,19 @@ order: 2
 ---
 # Introduction
 
-:::note[Remember]
-Read the **guide**.
-:::
+> [!NOTE]
+> **Remember**
+>
+> Read the **guide**.
 
 ::::details[More information]
 [Read more](./guide.md)
 
-:::tip
 Keep it simple.
-:::
 ::::
 
-:::warning
-Pay attention.
-:::
+> [!WARNING]
+> Pay attention.
 `,
       "index.md",
       diagnostics,
@@ -40,13 +38,12 @@ Pay attention.
       navTitle: "Start",
       order: 2,
     });
-    expect(result.html).toContain('<aside class="mdd-note">');
+    expect(result.html).toContain('<aside class="mdd-alert mdd-note">');
     expect(result.html).toContain('<details class="mdd-details">');
     expect(result.html).toContain(
       '<summary class="mdd-component-label"><strong>More information</strong></summary>',
     );
-    expect(result.html).toContain('<aside class="mdd-tip">');
-    expect(result.html).toContain('<aside class="mdd-warning">');
+    expect(result.html).toContain('<aside class="mdd-alert mdd-warning">');
     expect(result.markdown).toContain("> **Remember**");
     expect(result.markdown).toContain("[Read more](./guide.md)");
     expect(result.markdown).toContain("Keep it simple.");
@@ -103,9 +100,9 @@ Pay attention.
 
   test.each([
     [":::unknown\nBody\n:::", "UNKNOWN_COMPONENT"],
-    ["::note[Body]", "UNKNOWN_COMPONENT"],
-    [":note[Body]", "UNKNOWN_COMPONENT"],
-    [":::note{onclick=alert}\nBody\n:::", "INVALID_COMPONENT"],
+    ["::note[Body]", "REMOVED_COMPONENT"],
+    [":note[Body]", "REMOVED_COMPONENT"],
+    [":::details{onclick=alert}\nBody\n:::", "INVALID_COMPONENT"],
     ["<script>alert('no')</script>", "RAW_HTML"],
   ])("reports unsupported content: %s", (source, code) => {
     const diagnostics: Diagnostic[] = [];
@@ -120,7 +117,7 @@ Pay attention.
 
 Before <b>bold</b> after.
 
-:::note[Remember]
+:::details[Remember]
 <script>nested</script>
 
 First
@@ -153,7 +150,7 @@ Last
     );
     const before = structuredClone(document.tree);
     expect(await renderDocument(document)).toEqual({
-      html: '<p>Before bold after.</p>\n<aside class="mdd-note">\n<p class="mdd-component-label"><strong>Remember</strong></p>\n<p>First</p>\n<p>Last</p>\n</aside>',
+      html: '<p>Before bold after.</p>\n<details class="mdd-details">\n<summary class="mdd-component-label"><strong>Remember</strong></summary>\n<p>First</p>\n<p>Last</p>\n</details>',
       markdown: "Before bold after.\n\n> **Remember**\n>\n> First\n>\n> Last\n",
     });
     expect(document.tree).toEqual(before);
@@ -182,7 +179,7 @@ Last
   test("validates and collects headings inside nested components", () => {
     const diagnostics: Diagnostic[] = [];
     const document = parseDocument(
-      "::::note\n# Inner\n\n[bad](javascript:alert%281%29)\n\n<script>bad</script>\n\n:::unknown\nBad\n:::\n::::",
+      "::::details\n# Inner\n\n[bad](javascript:alert%281%29)\n\n<script>bad</script>\n\n:::unknown\nBad\n:::\n::::",
       "page.md",
       diagnostics,
     );
