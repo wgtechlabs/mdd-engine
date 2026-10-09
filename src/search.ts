@@ -276,7 +276,8 @@ export function search(
       title: page.title,
       url: destination?.url ?? page.url,
       ...(destination?.title ? { section: destination.title } : {}),
-      excerpt: excerpt(source, terms),
+      // Keep source text until ranking so only returned hits need a snippet.
+      excerpt: source,
       score:
         weights.reduce((sum, weight) => sum + weight, 0) +
         (title === phrase
@@ -289,5 +290,8 @@ export function search(
   results.sort(
     (a, b) => b.score - a.score || (a.url < b.url ? -1 : a.url > b.url ? 1 : 0),
   );
-  return results.slice(0, limit);
+  return results.slice(0, limit).map((result) => ({
+    ...result,
+    excerpt: excerpt(result.excerpt, terms),
+  }));
 }
