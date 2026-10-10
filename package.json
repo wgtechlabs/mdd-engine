@@ -1,6 +1,6 @@
 {
   "name": "@wgtechlabs/mdd-engine",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Headless Markdown documentation compiler for mdd",
   "type": "module",
   "license": "MIT",
