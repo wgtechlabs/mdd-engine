@@ -20,6 +20,7 @@ import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
 import { parseDocument as parseYaml } from "yaml";
 import { transformAlerts } from "./alerts.js";
+import { endpointParagraph } from "./endpoints.js";
 import type { Diagnostic, Heading, Metadata } from "./types.js";
 
 export interface ParsedDocument {
@@ -46,10 +47,20 @@ const htmlRenderer = unified()
       ...defaultSchema.attributes,
       aside: [["className", /^mdd-/]],
       details: [["className", "mdd-details"]],
+      div: [["className", "mdd-endpoint"]],
       p: [
         ...(defaultSchema.attributes?.p ?? []),
         ["className", "mdd-component-label"],
       ],
+      strong: [
+        ...(defaultSchema.attributes?.strong ?? []),
+        [
+          "className",
+          "mdd-endpoint-method",
+          /^mdd-method-(get|head|post|put|patch|delete|options|trace|connect)$/,
+        ],
+      ],
+      code: [["className", /^language-./, "mdd-endpoint-path"]],
       summary: [
         ...(defaultSchema.attributes?.summary ?? []),
         ["className", "mdd-component-label"],
@@ -262,10 +273,20 @@ export function parseDocument(
       );
       return;
     }
+    if (node.name === "endpoint") {
+      const paragraph = endpointParagraph(node, source, (message) =>
+        report("INVALID_COMPONENT", message, node),
+      );
+      if (paragraph && parent && index !== undefined) {
+        parent.children[index] = paragraph;
+        return [SKIP, index];
+      }
+      return;
+    }
     if (node.type !== "containerDirective" || node.name !== "details") {
       report(
         "UNKNOWN_COMPONENT",
-        `Unsupported component ${node.name}; use a GitHub alert or a details container.`,
+        `Unsupported component ${node.name}; use a GitHub alert, details container, or endpoint leaf.`,
         node,
       );
       return;
