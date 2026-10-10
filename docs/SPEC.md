@@ -110,7 +110,7 @@ Resolve relative `.md` links and local image references against their source fil
 
 ## Markdown components and headless output
 
-Use an established Markdown parser with a documented GFM subset (tables, task lists, strikethrough), GitHub-style alerts, and a `details` directive.
+Use an established Markdown parser with a documented GFM subset (tables, task lists, strikethrough), GitHub-style alerts, a `details` directive, and an `endpoint` leaf directive.
 
 ```markdown
 > [!NOTE]
@@ -126,6 +126,10 @@ Alerts are root-level blockquotes whose opening line contains exactly one upperc
 The engine emits `<aside class="mdd-alert mdd-note">` for a note, with the corresponding lowercase type class for the other alerts. Its first child is `<p class="mdd-component-label"><strong>Note</strong></p>`; the visible labels are Note, Tip, Important, Warning, and Caution. These are static article content, without live-region roles. Normalized Markdown preserves the `> [!TYPE]` marker and body. The reader composes the article into a page; themes own colors, icons, borders, and spacing. See [the alert contract](ALERTS.md) for all hooks and examples.
 
 The removed `:::note`, `:::tip`, and `:::warning` directives produce an actionable `REMOVED_COMPONENT` error identifying the replacement alert syntax and how to retain an optional custom title in the body. They must not silently drop content or continue as aliases. `:::details` retains its existing `details`/`summary` output, optional label, and `mdd-details` hook. Validate supported names/attributes; unknown directives produce an actionable error instead of dropping text. Markdown is permissive, so do not promise that every malformed delimiter can be detected.
+
+Endpoint documentation uses `::endpoint{method="GET" path="/v1/widgets/{id}"}`. Only the leaf form is accepted, without a label and with exactly the required `method` and `path` attributes. Normalize method case to uppercase and allow GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS, TRACE, and CONNECT. Paths must begin with `/`, must not begin with `//`, and must contain no whitespace, ASCII controls, or C1 controls. Braces, query punctuation, and markup-looking characters remain literal escaped text. Invalid signatures report `INVALID_COMPONENT` with the source location and prevent a successful site result.
+
+Emit `<div class="mdd-endpoint"><strong class="mdd-endpoint-method mdd-method-get">GET</strong> <code class="mdd-endpoint-path">/v1/widgets/{id}</code></div>`, substituting the validated lowercase method class and safely escaped path. Normalized Markdown uses a bold method and inline-code path; no directive syntax or HTML remains. The method/path participate in plain-text search without adding headings or changing page models. Ordinary Markdown supplies descriptions, parameters, and request/response examples, including when signatures are nested inside `details`. These paths are documentation text: never rewrite them as local content links, prepend the documentation base path, fetch them, or execute requests. The engine owns this authoring contract; MDD owns reader enhancements and themes own colors and layout.
 
 Disable raw author HTML in v0.1 and escape/sanitize generated content and unsafe URL schemes. Do not evaluate MDX, template expressions, config JavaScript, or theme JavaScript. Preserve readable component labels/bodies in the normalized Markdown output for agents, without navigation HTML or executable content.
 
