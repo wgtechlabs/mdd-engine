@@ -133,6 +133,20 @@ Use GitHub-style alerts with `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, or `CAUTION`
 
 `:::details[More information]` remains supported and becomes `details`/`summary`; its label is optional, attributes are errors, and its readable Markdown uses a blockquote with a bold label. The old `:::note`, `:::tip`, and `:::warning` directives now fail with a `REMOVED_COMPONENT` migration diagnostic. See [alerts and migration](docs/ALERTS.md) for all five types, theme hooks, and how to preserve custom titles and bodies.
 
+Document an API endpoint with a leaf directive, then use ordinary Markdown for parameters and request/response examples:
+
+```markdown
+## Retrieve a widget
+
+::endpoint{method="GET" path="/v1/widgets/{id}"}
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `id` | string | Widget identifier. |
+```
+
+The required `method` accepts GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS, TRACE, or CONNECT, normalizing lowercase/mixed case to uppercase. The required `path` starts with a single `/` and contains no whitespace or control characters; braces and query punctuation remain literal text. Labels, extra attributes, and inline/container forms are errors. The engine emits a `div.mdd-endpoint` containing `strong.mdd-endpoint-method.mdd-method-get` (or the corresponding lowercase method) and `code.mdd-endpoint-path`. Normalized Markdown contains `**GET**` followed by the code-formatted path, so the signature stays readable and searchable. Endpoint paths are not rewritten with the documentation base path. This is documentation only: no HTTP requests run. MDD and its themes provide presentation.
+
 Title precedence is frontmatter title, first H1, then readable filename. Navigation uses `navTitle` when supplied. Explicit `order` sorts first; remaining siblings sort deterministically by label and path.
 
 Local `.md` links, extensionless routes, reference links, and images resolve from their source document. A leading slash addresses the documentation root. `basePath` prefixes public links, including `/docs/` and `/repository/docs/`. When a file-style URL matches both an existing supported asset and a page route, the asset wins: `chart.png` selects the image, while `/chart.png/` explicitly selects the page. If no regular asset exists, dotted page routes still resolve. External links are preserved without network requests. Headings have `mdd-`-prefixed GitHub-style slugs; author links such as `#installation` are rewritten to `#mdd-installation`. Duplicate headings receive `-1`, `-2`, and subsequent suffixes.

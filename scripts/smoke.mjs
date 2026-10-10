@@ -65,7 +65,7 @@ try {
   );
   await writeFile(
     path.join(contents, "guide", "install.md"),
-    "# Install\n\n[Home](../index.md)\n\n## Requirements\n\nUse a supported runtime.\n",
+    '# Install\n\n[Home](../index.md)\n\n## Requirements\n\nUse a supported runtime.\n\n## API\n\n::endpoint{method="get" path="/v1/widgets/{id}"}\n',
   );
   await writeFile(
     path.join(temp, "consumer.mjs"),
@@ -97,6 +97,11 @@ for (const basePath of ['/', '/docs/', '/repository/docs/']) {
   assert.deepEqual(sectionHits[0].breadcrumbs, ['Guide', 'Install']);
   assert.deepEqual(sectionHits[0].matches.section.map(([start, end]) =>
     sectionHits[0].section.slice(start, end)), ['Requirements']);
+  const install = result.site.pages.find(p => p.route === '/guide/install/');
+  assert(install.html.includes('<strong class="mdd-endpoint-method mdd-method-get">GET</strong>'));
+  assert(install.html.includes('<code class="mdd-endpoint-path">/v1/widgets/{id}</code>'));
+  assert(!install.markdown.includes('::endpoint'));
+  assert.equal(search(index, 'GET widgets')[0].url, basePath + 'guide/install/#mdd-api');
 
   const lateMatch = search({ version: 1, pages: [{
     title: 'Guide', url: basePath, description: '', sections: [{
